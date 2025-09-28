@@ -1,10 +1,19 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useEffect, useState, ChangeEvent, FormEvent } from 'react';
 import { sdk } from '@farcaster/miniapp-sdk'
 
 export default function Home() {
-  const [copied, setCopied] = useState<string | null>(null);
+  const [formData, setFormData] = useState({
+    name: '',
+    description: '',
+    email: '',
+    github: '',
+    workHistory: [''],
+    projects: [''],
+    achievements: ['']
+  });
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
   useEffect(() => {
     const initializeSdk = async () => {
@@ -13,86 +22,256 @@ export default function Home() {
     initializeSdk();
   }, []);
 
-  const copyToClipboard = async (text: string, id: string) => {
-    await navigator.clipboard.writeText(text);
-    setCopied(id);
-    setTimeout(() => setCopied(null), 2000);
+  type ScalarField = 'name' | 'description' | 'email' | 'github';
+  type ListField = 'workHistory' | 'projects' | 'achievements';
+
+  const handleChange = (
+    field: ScalarField,
+  ) => (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    setFormData((prev) => ({
+      ...prev,
+      [field]: event.target.value,
+    }));
   };
 
-  const commands = [
-    {
-      id: 'create',
-      title: '1. Create a new repository from this template',
-      command: 'gh repo create your-new-repo --template uratmangun/nextjs-mcp --public --clone',
-      description: 'Creates a new public repository using this as a template and clones it locally'
-    },
-    {
-      id: 'clone',
-      title: '2. Or clone an existing repository created from this template',
-      command: 'gh repo clone username/your-repo-name',
-      description: 'Clones an existing repository to your local machine'
-    },
-    {
-      id: 'make-public',
-      title: '3. Make an existing repository public (if needed)',
-      command: 'gh repo edit --visibility public',
-      description: 'Changes repository visibility to public (run inside the repo directory)'
-    }
-  ];
+  const handleListChange = (
+    field: ListField,
+    index: number,
+  ) => (event: ChangeEvent<HTMLTextAreaElement>) => {
+    const value = event.target.value;
+    setFormData((prev) => {
+      const updated = [...prev[field]];
+      updated[index] = value;
+      return {
+        ...prev,
+        [field]: updated,
+      };
+    });
+  };
+
+  const addListEntry = (field: ListField) => () => {
+    setFormData((prev) => ({
+      ...prev,
+      [field]: [...prev[field], ''],
+    }));
+  };
+
+  const removeListEntry = (field: ListField, index: number) => () => {
+    setFormData((prev) => {
+      if (prev[field].length === 1) return prev;
+      const updated = prev[field].filter((_, idx) => idx !== index);
+      return {
+        ...prev,
+        [field]: updated,
+      };
+    });
+  };
+
+  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+    setStatusMessage('Resume draft saved locally. You can wire this up to storage or AI next.');
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-slate-800 p-8">
       <div className="max-w-4xl mx-auto">
         <header className="text-center mb-12">
           <h1 className="text-4xl font-bold text-slate-800 dark:text-slate-100 mb-4">
-            Next.js MCP Template
+            Resume analyzer
           </h1>
           <p className="text-lg text-slate-600 dark:text-slate-300">
-            Use this to create your next Next.js MCP apps
+            analyze how your resume need to be changed using ai
           </p>
         </header>
 
-        <div className="space-y-6">
-          {commands.map((cmd) => (
-            <div
-              key={cmd.id}
-              className="bg-white dark:bg-slate-800 rounded-xl shadow-lg p-6 border border-slate-200 dark:border-slate-700"
-            >
-              <h3 className="text-xl font-semibold text-slate-800 dark:text-slate-100 mb-3">
-                {cmd.title}
-              </h3>
-              <p className="text-slate-600 dark:text-slate-300 mb-4">
-                {cmd.description}
-              </p>
-              <div className="relative">
-                <pre className="bg-slate-900 dark:bg-slate-950 text-green-400 p-4 rounded-lg overflow-x-auto font-mono text-sm">
-                  <code>{cmd.command}</code>
-                </pre>
-                <button
-                  onClick={() => copyToClipboard(cmd.command, cmd.id)}
-                  className="absolute top-2 right-2 bg-slate-700 hover:bg-slate-600 text-white px-3 py-1 rounded text-xs transition-colors"
-                >
-                  {copied === cmd.id ? '✓ Copied!' : 'Copy'}
-                </button>
+        <section className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg p-8">
+          <h2 className="text-2xl font-semibold text-slate-800 dark:text-slate-100 mb-6">
+            Build your resume snapshot
+          </h2>
+          <form className="space-y-6" onSubmit={handleSubmit}>
+            <div className="grid gap-6 md:grid-cols-2">
+              <div className="flex flex-col">
+                <label htmlFor="name" className="text-sm font-medium text-slate-600 dark:text-slate-300 mb-2">
+                  Name
+                </label>
+                <input
+                  id="name"
+                  name="name"
+                  type="text"
+                  required
+                  value={formData.name}
+                  onChange={handleChange('name')}
+                  className="rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-4 py-2 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                />
+              </div>
+              <div className="flex flex-col">
+                <label htmlFor="email" className="text-sm font-medium text-slate-600 dark:text-slate-300 mb-2">
+                  Email
+                </label>
+                <input
+                  id="email"
+                  name="email"
+                  type="email"
+                  required
+                  value={formData.email}
+                  onChange={handleChange('email')}
+                  className="rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-4 py-2 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                />
               </div>
             </div>
-          ))}
-        </div>
 
-        <div className="mt-12 bg-blue-50 dark:bg-blue-900/20 rounded-xl p-6 border border-blue-200 dark:border-blue-800">
-          <h3 className="text-lg font-semibold text-blue-800 dark:text-blue-200 mb-3">
-            📋 Prerequisites
-          </h3>
-          <ul className="space-y-2 text-blue-700 dark:text-blue-300">
-            <li>• Install GitHub CLI: <code className="bg-blue-100 dark:bg-blue-800 px-2 py-1 rounded">brew install gh</code> or <code className="bg-blue-100 dark:bg-blue-800 px-2 py-1 rounded">winget install GitHub.cli</code></li>
-            <li>• Authenticate: <code className="bg-blue-100 dark:bg-blue-800 px-2 py-1 rounded">gh auth login</code></li>
-            <li>• Replace <code className="bg-blue-100 dark:bg-blue-800 px-2 py-1 rounded">your-new-repo</code> and <code className="bg-blue-100 dark:bg-blue-800 px-2 py-1 rounded">username/your-repo-name</code> with actual names</li>
-          </ul>
-        </div>
+            <div className="flex flex-col">
+              <label htmlFor="github" className="text-sm font-medium text-slate-600 dark:text-slate-300 mb-2">
+                GitHub link
+              </label>
+              <input
+                id="github"
+                name="github"
+                type="url"
+                placeholder="https://github.com/username"
+                value={formData.github}
+                onChange={handleChange('github')}
+                className="rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-4 py-2 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+              />
+            </div>
 
-        <footer className="text-center mt-12 text-slate-500 dark:text-slate-400">
-          <p>After creating your repository, run <code className="bg-slate-100 dark:bg-slate-800 px-2 py-1 rounded">pnpm dev</code> to start development!</p>
-        </footer>
+            <div className="flex flex-col">
+              <label htmlFor="description" className="text-sm font-medium text-slate-600 dark:text-slate-300 mb-2">
+                Professional summary
+              </label>
+              <textarea
+                id="description"
+                name="description"
+                rows={4}
+                value={formData.description}
+                onChange={handleChange('description')}
+                className="rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-4 py-2 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+              />
+            </div>
+
+            <div className="flex flex-col gap-6">
+              <div className="flex flex-col gap-4">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium text-slate-600 dark:text-slate-300">
+                    Work history
+                  </label>
+                  <button
+                    type="button"
+                    onClick={addListEntry('workHistory')}
+                    className="text-sm font-medium text-sky-600 hover:text-sky-700"
+                  >
+                    + Add role
+                  </button>
+                </div>
+                {formData.workHistory.map((entry, index) => (
+                  <div key={`work-${index}`} className="flex flex-col gap-2">
+                    <textarea
+                      rows={4}
+                      placeholder="List roles, companies, and impact"
+                      value={entry}
+                      onChange={handleListChange('workHistory', index)}
+                      className="rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-4 py-2 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                    />
+                    {formData.workHistory.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={removeListEntry('workHistory', index)}
+                        className="self-end text-xs font-medium text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+
+              <div className="flex flex-col gap-4">
+                <div className="flex items-center justify-between">
+                  <label className="text-sm font-medium text-slate-600 dark:text-slate-300">
+                    Project highlights
+                  </label>
+                  <button
+                    type="button"
+                    onClick={addListEntry('projects')}
+                    className="text-sm font-medium text-sky-600 hover:text-sky-700"
+                  >
+                    + Add project
+                  </button>
+                </div>
+                {formData.projects.map((entry, index) => (
+                  <div key={`project-${index}`} className="flex flex-col gap-2">
+                    <textarea
+                      rows={4}
+                      placeholder="Describe standout projects and metrics"
+                      value={entry}
+                      onChange={handleListChange('projects', index)}
+                      className="rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-4 py-2 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                    />
+                    {formData.projects.length > 1 && (
+                      <button
+                        type="button"
+                        onClick={removeListEntry('projects', index)}
+                        className="self-end text-xs font-medium text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                      >
+                        Remove
+                      </button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            <div className="flex flex-col gap-4">
+              <div className="flex items-center justify-between">
+                <label className="text-sm font-medium text-slate-600 dark:text-slate-300">
+                  Achievements
+                </label>
+                <button
+                  type="button"
+                  onClick={addListEntry('achievements')}
+                  className="text-sm font-medium text-sky-600 hover:text-sky-700"
+                >
+                  + Add achievement
+                </button>
+              </div>
+              {formData.achievements.map((entry, index) => (
+                <div key={`achievement-${index}`} className="flex flex-col gap-2">
+                  <textarea
+                    rows={3}
+                    placeholder="Awards, certifications, and key wins"
+                    value={entry}
+                    onChange={handleListChange('achievements', index)}
+                    className="rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-4 py-2 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                  />
+                  {formData.achievements.length > 1 && (
+                    <button
+                      type="button"
+                      onClick={removeListEntry('achievements', index)}
+                      className="self-end text-xs font-medium text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                    >
+                      Remove
+                    </button>
+                  )}
+                </div>
+              ))}
+            </div>
+
+            <div className="flex items-center justify-between">
+              <button
+                type="submit"
+                className="inline-flex items-center rounded-lg bg-sky-600 px-5 py-2 text-sm font-semibold text-white transition hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-400"
+              >
+                Save resume draft
+              </button>
+
+              {statusMessage && (
+                <span className="text-sm text-slate-500 dark:text-slate-300">
+                  {statusMessage}
+                </span>
+              )}
+            </div>
+          </form>
+        </section>
       </div>
     </div>
   );
