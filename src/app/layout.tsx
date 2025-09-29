@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import Providers from "./providers";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -24,7 +25,7 @@ const getFarcasterConfig = () => {
     // Fallback config if file read fails
     return {
       miniapp: {
-        name: 'Next.js Mini App',
+        name: 'Resume AI Analyzer',
         buttonTitle: 'Launch App',
         homeUrl: process.env.NEXT_PUBLIC_APP_DOMAIN || 'https://example.com',
         imageUrl: process.env.NEXT_PUBLIC_APP_DOMAIN 
@@ -43,8 +44,8 @@ const farcasterConfig = getFarcasterConfig();
 
 export const metadata: Metadata = {
   title: {
-    default: 'Farcaster Mini App',
-    template: '%s | Farcaster Mini App',
+    default: 'Resume AI Analyzer',
+    template: '%s | Resume AI Analyzer',
   },
   description: 'A Farcaster mini app built with Next.js and deployed on Cloudflare Pages',
   keywords: ['Farcaster', 'Mini App', 'Web3', 'Social', 'Decentralized'],
@@ -58,16 +59,16 @@ export const metadata: Metadata = {
   },
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'),
   openGraph: {
-    title: 'Farcaster Mini App',
+    title: 'Resume AI Analyzer',
     description: 'A Farcaster mini app built with Next.js',
     url: '/',
-    siteName: 'Farcaster Mini App',
+    siteName: 'Resume AI Analyzer',
     locale: 'en_US',
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Farcaster Mini App',
+    title: 'Resume AI Analyzer',
     description: 'A Farcaster mini app built with Next.js',
   },
   robots: {
@@ -82,9 +83,9 @@ export const metadata: Metadata = {
     },
   },
   icons: {
-    icon: '/favicon.ico',
-    shortcut: '/favicon-16x16.png',
-    apple: '/apple-touch-icon.png',
+    icon: '/icon.svg',
+    shortcut: '/icon.svg',
+    apple: '/icon.svg',
   },
   other: {
     // Farcaster Mini App metadata for sharing
@@ -130,7 +131,9 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
-        {children}
+        <Providers>
+          {children}
+        </Providers>
       </body>
     </html>
   );
