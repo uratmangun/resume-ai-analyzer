@@ -161,134 +161,24 @@ jobs:
             exit 1
           fi
           
-      - name: "🚢 Deploy temporary build to Vercel for screenshots"
-        id: deploy-temp
-        env:
-          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
-          # Farcaster Configuration
-          FARCASTER_FID: ${{ secrets.FARCASTER_FID }}
-          FARCASTER_CUSTODY_ADDRESS: ${{ secrets.FARCASTER_CUSTODY_ADDRESS }}
-          FARCASTER_CUSTODY_PRIVATE_KEY: ${{ secrets.FARCASTER_CUSTODY_PRIVATE_KEY }}
-          NEXT_PUBLIC_APP_DOMAIN: https://${{ steps.generate-vercel-project.outputs.project_name }}.vercel.app
-          # App Metadata
-          FARCASTER_APP_NAME: ${{ secrets.FARCASTER_APP_NAME }}
-          FARCASTER_APP_BUTTON_TITLE: ${{ secrets.FARCASTER_APP_BUTTON_TITLE }}
-          FARCASTER_APP_DESCRIPTION: ${{ secrets.FARCASTER_APP_DESCRIPTION }}
-          FARCASTER_SPLASH_BACKGROUND_COLOR: ${{ secrets.FARCASTER_SPLASH_BACKGROUND_COLOR }}
-          # API Keys
-          TOGETHER_API_KEY: ${{ secrets.TOGETHER_API_KEY }}
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          # Optional Configuration
-          FARCASTER_WEBHOOK_SECRET: ${{ secrets.FARCASTER_WEBHOOK_SECRET }}
-          FLUX_GENERATION_DELAY: ${{ secrets.FLUX_GENERATION_DELAY }}
-        run: |
-          echo "🚢 Deploying temporary build to Vercel for screenshot generation..."
-          
-          # Define project to deploy to
-          PROJECT_ID="${{ steps.generate-vercel-project.outputs.project_id }}"
-          
-          # Deploy to Vercel and capture the deployment URL from stdout
-          echo "🚀 Starting temporary deployment..."
-          TEMP_DEPLOYMENT_URL=$(vercel deploy \
-            --token="$VERCEL_TOKEN" \
-            --yes \
-            ./ 2>&1 | tee /tmp/vercel_temp_deploy.log | tail -1)
-          
-          # Show deployment logs
-          echo "📋 Temporary deployment output:"
-          cat /tmp/vercel_temp_deploy.log
-          echo ""
-          echo "🔗 Captured temporary deployment URL: $TEMP_DEPLOYMENT_URL"
-          
-          # Verify we got a valid URL
-          if [[ -z "$TEMP_DEPLOYMENT_URL" ]]; then
-            echo "❌ Failed to capture temporary deployment URL"
-            echo "📋 Full deployment log:"
-            cat /tmp/vercel_temp_deploy.log
-            exit 1
-          fi
-          
-          # Ensure the URL is properly formatted
-          if [[ ! "$TEMP_DEPLOYMENT_URL" =~ ^https:// ]]; then
-            TEMP_DEPLOYMENT_URL="https://$TEMP_DEPLOYMENT_URL"
-          fi
-          
-          echo "✅ Temporary deployment URL: $TEMP_DEPLOYMENT_URL"
-          
-          # Get the actual production domain from Vercel API for use in subsequent steps
-          echo "🔍 Fetching production domain for environment variables..."
-          DOMAINS_RESPONSE=$(curl -s -X GET \
-            "https://api.vercel.com/v9/projects/${PROJECT_ID}/domains?production=true" \
-            -H "Authorization: Bearer ${VERCEL_TOKEN}" \
-            -H "Content-Type: application/json")
-          
-          # Extract the production domain name (the truncated one)
-          PRODUCTION_DOMAIN=$(echo "$DOMAINS_RESPONSE" | jq -r '.domains[0].name' 2>/dev/null || echo "")
-          
-          if [[ -z "$PRODUCTION_DOMAIN" || "$PRODUCTION_DOMAIN" == "null" ]]; then
-            echo "⚠️ Could not fetch production domain via API, using project name..."
-            PROJECT_NAME="${{ steps.generate-vercel-project.outputs.project_name }}"
-            PRODUCTION_DOMAIN="${PROJECT_NAME}.vercel.app"
-          fi
-          
-          echo "✅ Production domain for env vars: $PRODUCTION_DOMAIN"
-          echo "production_domain=$PRODUCTION_DOMAIN" >> $GITHUB_OUTPUT
-          
-          # Extract the deployment ID from the URL for deletion later
-          # Vercel URLs are in format: https://[project]-[deploymentid].vercel.app
-          DEPLOYMENT_ID=$(echo "$TEMP_DEPLOYMENT_URL" | sed -n 's/.*-\([a-z0-9]\{9\}\)\.vercel\.app.*/\1/p')
-          
-          if [[ -z "$DEPLOYMENT_ID" ]]; then
-            # If we can't extract from URL, get it from Vercel API
-            echo "🔍 Getting deployment ID from Vercel API..."
-            DEPLOYMENT_ID=$(curl -s -X GET \
-              "https://api.vercel.com/v13/deployments?projectId=${{ steps.generate-vercel-project.outputs.project_id }}&limit=1" \
-              -H "Authorization: Bearer ${VERCEL_TOKEN}" \
-              -H "Content-Type: application/json" | jq -r '.deployments[0].uid')
-          fi
-          
-          echo "deployment_url=$TEMP_DEPLOYMENT_URL" >> $GITHUB_OUTPUT
-          echo "deployment_id=$DEPLOYMENT_ID" >> $GITHUB_OUTPUT
-          echo "📦 Deployment ID saved for cleanup: $DEPLOYMENT_ID"
+      
       - name: "🔑 Generate Farcaster account association"
         env:
-            NEXT_PUBLIC_APP_DOMAIN: ${{ steps.deploy-temp.outputs.production_domain }}
+            NEXT_PUBLIC_APP_DOMAIN: https://${{ steps.cleanup-projects.outputs.existing_project_name }}.vercel.app
             FARCASTER_FID: ${{ secrets.FARCASTER_FID }}
             FARCASTER_CUSTODY_ADDRESS: ${{ secrets.FARCASTER_CUSTODY_ADDRESS }}
             FARCASTER_CUSTODY_PRIVATE_KEY: ${{ secrets.FARCASTER_CUSTODY_PRIVATE_KEY }}
         run: |
             echo "🔧 Generating Farcaster account association for domain: $NEXT_PUBLIC_APP_DOMAIN"
             node scripts/generate-farcaster-account-association.js generate
-      - name: "🎨 Generate AI icon"
+      - name: "🎨 Generate SVG icons with gradients"
         env:
-          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          BROWSERLESS_API_URL: ${{ secrets.BROWSERLESS_API_URL }}
+            NEXT_PUBLIC_APP_DOMAIN: ${{ steps.cleanup-projects.outputs.existing_project_name }}.vercel.app
         run: |
-          # Export domain URLs for icon generation
-          PRODUCTION_DOMAIN="${{ steps.deploy-temp.outputs.production_domain }}"
-          export SCREENSHOT_URL="https://${PRODUCTION_DOMAIN}"
-          export NEXT_PUBLIC_APP_DOMAIN="$PRODUCTION_DOMAIN"
-          
-          echo "🎨 Generating AI icon using Flux API"
-          echo "Using production domain: $PRODUCTION_DOMAIN"
-          node scripts/generate-icon-with-fallback.js
-
-      - name: "📸 Generate screenshots"
-        env:
-          BROWSERLESS_API_URL: ${{ secrets.BROWSERLESS_API_URL }}
-        run: |
-          # Use the actual production domain from the temporary deployment step
-          PRODUCTION_DOMAIN="${{ steps.deploy-temp.outputs.production_domain }}"
-          PRODUCTION_URL="https://${PRODUCTION_DOMAIN}"
-          
-          echo "📸 Generating screenshots from production domain: $PRODUCTION_DOMAIN"
-          echo "Using production URL: $PRODUCTION_URL"
-          
-          # Export for the script
-          export SCREENSHOT_URL="$PRODUCTION_URL"
-          export NEXT_PUBLIC_APP_DOMAIN="$PRODUCTION_DOMAIN"
-          
-          node scripts/generate-screenshots.js
+          # Export domain URLs for SVG icon generation
+            
+          echo "🎨 Generating SVG icons with gradient colors"
+          node scripts/generate-svg-icons-with-gradient.js
 
 
       - name: "🏗️ Build application"
@@ -300,14 +190,9 @@ jobs:
           FARCASTER_FID: ${{ secrets.FARCASTER_FID }}
           FARCASTER_CUSTODY_ADDRESS: ${{ secrets.FARCASTER_CUSTODY_ADDRESS }}
           FARCASTER_CUSTODY_PRIVATE_KEY: ${{ secrets.FARCASTER_CUSTODY_PRIVATE_KEY }}
-          FARCASTER_APP_NAME: ${{ secrets.FARCASTER_APP_NAME }}
-          FARCASTER_APP_BUTTON_TITLE: ${{ secrets.FARCASTER_APP_BUTTON_TITLE }}
-          FARCASTER_APP_DESCRIPTION: ${{ secrets.FARCASTER_APP_DESCRIPTION }}
-          FARCASTER_SPLASH_BACKGROUND_COLOR: ${{ secrets.FARCASTER_SPLASH_BACKGROUND_COLOR }}
           TOGETHER_API_KEY: ${{ secrets.TOGETHER_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          FARCASTER_WEBHOOK_SECRET: ${{ secrets.FARCASTER_WEBHOOK_SECRET }}
-          FLUX_GENERATION_DELAY: ${{ secrets.FLUX_GENERATION_DELAY }}
+          
 
       - name: "🚀 Deploy to Vercel (Production)"
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
@@ -319,17 +204,11 @@ jobs:
           FARCASTER_CUSTODY_ADDRESS: ${{ secrets.FARCASTER_CUSTODY_ADDRESS }}
           FARCASTER_CUSTODY_PRIVATE_KEY: ${{ secrets.FARCASTER_CUSTODY_PRIVATE_KEY }}
           APP_DOMAIN: https://${{ steps.generate-vercel-project.outputs.project_name }}.vercel.app
-          # App Metadata
-          FARCASTER_APP_NAME: ${{ secrets.FARCASTER_APP_NAME }}
-          FARCASTER_APP_BUTTON_TITLE: ${{ secrets.FARCASTER_APP_BUTTON_TITLE }}
-          FARCASTER_APP_DESCRIPTION: ${{ secrets.FARCASTER_APP_DESCRIPTION }}
-          FARCASTER_SPLASH_BACKGROUND_COLOR: ${{ secrets.FARCASTER_SPLASH_BACKGROUND_COLOR }}
+         
           # API Keys
           TOGETHER_API_KEY: ${{ secrets.TOGETHER_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          # Optional Configuration
-          FARCASTER_WEBHOOK_SECRET: ${{ secrets.FARCASTER_WEBHOOK_SECRET }}
-          FLUX_GENERATION_DELAY: ${{ secrets.FLUX_GENERATION_DELAY }}
+          
         run: |
           echo "Deploying to Vercel Production..."
           
@@ -402,25 +281,24 @@ jobs:
               console.error('Failed to update repository homepage URL:', error);
               // Don't fail the workflow if homepage update fails
             }
-
       - name: "📢 Announce deployment and favorite frame"
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
         env:
-          FARCASTER_BEARER_TOKEN: ${{ secrets.FARCASTER_BEARER_TOKEN }}
+             FARCASTER_BEARER_TOKEN: ${{ secrets.FARCASTER_BEARER_TOKEN }}
         run: |
-              PRODUCTION_URL="${{ steps.deploy-production.outputs.production_url }}"
-              # Extract domain from full URL for scripts that expect domain only
-              DOMAIN=$(echo "$PRODUCTION_URL" | sed 's|https://||' | sed 's|http://||')
-              
-              echo "❤️ Debugging domain manifest for $DOMAIN"
-              node scripts/debug-domain-manifest.js "$DOMAIN"
-    
-              echo "❤️ Favoriting frame for $DOMAIN" 
-              node scripts/favorite-frame.js "$DOMAIN"
-              
-              echo "🚀 Posting to Farcaster about the new deployment"
-              node scripts/post-to-farcaster.js "New version deployed at $DOMAIN" "$PRODUCTION_URL"
-    
+                  PRODUCTION_URL="${{ steps.deploy-production.outputs.production_url }}"
+                  # Extract domain from full URL for scripts that expect domain only
+                  DOMAIN=$(echo "$PRODUCTION_URL" | sed 's|https://||' | sed 's|http://||')
+                  
+                  echo "❤️ Debugging domain manifest for $DOMAIN"
+                  node scripts/debug-domain-manifest.js "$DOMAIN"
+        
+                  echo "❤️ Favoriting frame for $DOMAIN" 
+                  node scripts/favorite-frame.js "$DOMAIN"
+                  
+                  echo "🚀 Posting to Farcaster about the new deployment"
+                  node scripts/post-to-farcaster.js "New version deployed at $DOMAIN" "$PRODUCTION_URL"
+                  
       - name: "🔍 Deploy to Vercel (Preview)"
         if: github.event_name == 'pull_request'
         id: deploy-preview
@@ -431,17 +309,9 @@ jobs:
           FARCASTER_CUSTODY_ADDRESS: ${{ secrets.FARCASTER_CUSTODY_ADDRESS }}
           FARCASTER_CUSTODY_PRIVATE_KEY: ${{ secrets.FARCASTER_CUSTODY_PRIVATE_KEY }}
           APP_DOMAIN: https://${{ steps.generate-vercel-project.outputs.project_name }}.vercel.app
-          # App Metadata
-          FARCASTER_APP_NAME: ${{ secrets.FARCASTER_APP_NAME }}
-          FARCASTER_APP_BUTTON_TITLE: ${{ secrets.FARCASTER_APP_BUTTON_TITLE }}
-          FARCASTER_APP_DESCRIPTION: ${{ secrets.FARCASTER_APP_DESCRIPTION }}
-          FARCASTER_SPLASH_BACKGROUND_COLOR: ${{ secrets.FARCASTER_SPLASH_BACKGROUND_COLOR }}
           # API Keys
           TOGETHER_API_KEY: ${{ secrets.TOGETHER_API_KEY }}
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          # Optional Configuration
-          FARCASTER_WEBHOOK_SECRET: ${{ secrets.FARCASTER_WEBHOOK_SECRET }}
-          FLUX_GENERATION_DELAY: ${{ secrets.FLUX_GENERATION_DELAY }}
         run: |
           echo "Deploying to Vercel Preview..."
           
