@@ -2,6 +2,7 @@
 
 import { useEffect, useState, ChangeEvent, FormEvent } from 'react';
 import { sdk } from '@farcaster/miniapp-sdk'
+import { SignedIn, SignedOut, SignInButton, UserButton } from '@clerk/nextjs';
 
 export default function Home() {
   const [formData, setFormData] = useState({
@@ -67,28 +68,84 @@ export default function Home() {
     });
   };
 
-  const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
-    setStatusMessage('Resume draft saved locally. You can wire this up to storage or AI next.');
+    setStatusMessage('Saving resume...');
+
+    try {
+      const payload = {
+        name: formData.name,
+        email: formData.email,
+        github: formData.github,
+        description: formData.description,
+        workHistory: formData.workHistory.filter((v) => v.trim().length > 0),
+        projects: formData.projects.filter((v) => v.trim().length > 0),
+        achievements: formData.achievements.filter((v) => v.trim().length > 0),
+      };
+
+      const res = await fetch('/api/resumes', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!res.ok) {
+        const err = await res.json().catch(() => null);
+        throw new Error(err?.error ? JSON.stringify(err.error) : 'Request failed');
+      }
+
+      const data = await res.json();
+      setStatusMessage(`Resume saved. ID: ${data.id}`);
+    } catch (error: any) {
+      console.error(error);
+      setStatusMessage(`Error saving resume: ${error?.message ?? 'Unknown error'}`);
+    }
   };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-slate-800 p-8">
       <div className="max-w-4xl mx-auto">
-        <header className="text-center mb-12">
-          <h1 className="text-4xl font-bold text-slate-800 dark:text-slate-100 mb-4">
-            Resume analyzer
-          </h1>
-          <p className="text-lg text-slate-600 dark:text-slate-300">
-            analyze how your resume need to be changed using ai
-          </p>
+        <header className="flex items-center justify-between mb-12">
+          <div className="text-center flex-1">
+            <h1 className="text-4xl font-bold text-slate-800 dark:text-slate-100 mb-1">
+              Resume AI Analyzer
+            </h1>
+            <p className="text-lg text-slate-600 dark:text-slate-300">
+              analyze how your resume need to be changed using ai
+            </p>
+          </div>
+          <div className="ml-4">
+            <SignedIn>
+              <UserButton afterSignOutUrl="/" />
+            </SignedIn>
+            <SignedOut>
+              <SignInButton mode="modal">
+                <button className="inline-flex items-center rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-400">
+                  Sign in
+                </button>
+              </SignInButton>
+            </SignedOut>
+          </div>
         </header>
 
-        <section className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg p-8">
-          <h2 className="text-2xl font-semibold text-slate-800 dark:text-slate-100 mb-6">
-            Build your resume snapshot
-          </h2>
-          <form className="space-y-6" onSubmit={handleSubmit}>
+        <SignedOut>
+          <section className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg p-8 text-center">
+            <h2 className="text-2xl font-semibold text-slate-800 dark:text-slate-100 mb-3">Sign in required</h2>
+            <p className="text-slate-600 dark:text-slate-300 mb-6">Please sign in to create and save your resume snapshots.</p>
+            <SignInButton mode="modal">
+              <button className="inline-flex items-center rounded-lg bg-sky-600 px-5 py-2 text-sm font-semibold text-white transition hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-400">
+                Sign in to continue
+              </button>
+            </SignInButton>
+          </section>
+        </SignedOut>
+
+        <SignedIn>
+          <section className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg p-8">
+            <h2 className="text-2xl font-semibold text-slate-800 dark:text-slate-100 mb-6">
+              Build your resume snapshot
+            </h2>
+            <form className="space-y-6" onSubmit={handleSubmit}>
             <div className="grid gap-6 md:grid-cols-2">
               <div className="flex flex-col">
                 <label htmlFor="name" className="text-sm font-medium text-slate-600 dark:text-slate-300 mb-2">
@@ -256,22 +313,23 @@ export default function Home() {
               ))}
             </div>
 
-            <div className="flex items-center justify-between">
-              <button
-                type="submit"
-                className="inline-flex items-center rounded-lg bg-sky-600 px-5 py-2 text-sm font-semibold text-white transition hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-400"
-              >
-                Save resume draft
-              </button>
+              <div className="flex items-center justify-between">
+                <button
+                  type="submit"
+                  className="inline-flex items-center rounded-lg bg-sky-600 px-5 py-2 text-sm font-semibold text-white transition hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-400"
+                >
+                  Save resume draft
+                </button>
 
-              {statusMessage && (
-                <span className="text-sm text-slate-500 dark:text-slate-300">
-                  {statusMessage}
-                </span>
-              )}
-            </div>
-          </form>
-        </section>
+                {statusMessage && (
+                  <span className="text-sm text-slate-500 dark:text-slate-300">
+                    {statusMessage}
+                  </span>
+                )}
+              </div>
+            </form>
+          </section>
+        </SignedIn>
       </div>
     </div>
   );
