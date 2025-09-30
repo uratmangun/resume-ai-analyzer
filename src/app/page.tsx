@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState, ChangeEvent, FormEvent } from 'react';
+import { useEffect, useState, ChangeEvent, FormEvent, Suspense } from 'react';
 import { sdk } from '@farcaster/miniapp-sdk'
 import { SignedIn, SignedOut, SignInButton, UserButton } from '@clerk/nextjs';
 import { useRouter, useSearchParams } from 'next/navigation';
@@ -25,7 +25,7 @@ type AchievementEntry = {
   achievementDescription: string;
 };
 
-export default function Home() {
+function HomeContent() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const resumeId = searchParams.get('id');
@@ -788,5 +788,22 @@ export default function Home() {
         </SignedIn>
       </div>
     </div>
+  );
+}
+
+export default function Home() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-slate-800 p-8">
+        <div className="max-w-4xl mx-auto">
+          <div className="text-center">
+            <h1 className="text-4xl font-bold text-slate-800 dark:text-slate-100 mb-1">Resume AI Analyzer</h1>
+            <p className="text-lg text-slate-600 dark:text-slate-300">Loading...</p>
+          </div>
+        </div>
+      </div>
+    }>
+      <HomeContent />
+    </Suspense>
   );
 }
