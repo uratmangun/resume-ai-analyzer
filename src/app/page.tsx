@@ -3,18 +3,45 @@
 import { useEffect, useState, ChangeEvent, FormEvent } from 'react';
 import { sdk } from '@farcaster/miniapp-sdk'
 import { SignedIn, SignedOut, SignInButton, UserButton } from '@clerk/nextjs';
+import { useRouter, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
+
+type WorkHistoryEntry = {
+  companyName: string;
+  role: string;
+  dateOfWork: string;
+  description: string;
+};
+
+type ProjectEntry = {
+  projectName: string;
+  projectUrl: string;
+  projectDescription: string;
+};
+
+type AchievementEntry = {
+  achievementName: string;
+  achievementUrl: string;
+  achievementDescription: string;
+};
 
 export default function Home() {
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const resumeId = searchParams.get('id');
+
   const [formData, setFormData] = useState({
+    title: '',
     name: '',
     description: '',
     email: '',
     github: '',
-    workHistory: [''],
-    projects: [''],
-    achievements: ['']
+    workHistory: [{ companyName: '', role: '', dateOfWork: '', description: '' }] as WorkHistoryEntry[],
+    projects: [{ projectName: '', projectUrl: '', projectDescription: '' }] as ProjectEntry[],
+    achievements: [{ achievementName: '', achievementUrl: '', achievementDescription: '' }] as AchievementEntry[]
   });
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [isEditing, setIsEditing] = useState(false);
 
   useEffect(() => {
     const initializeSdk = async () => {
@@ -23,8 +50,38 @@ export default function Home() {
     initializeSdk();
   }, []);
 
-  type ScalarField = 'name' | 'description' | 'email' | 'github';
-  type ListField = 'workHistory' | 'projects' | 'achievements';
+  useEffect(() => {
+    if (resumeId) {
+      // Load existing resume for editing
+      async function loadResume() {
+        try {
+          const res = await fetch(`/api/resumes/${resumeId}`);
+          if (res.ok) {
+            const data = await res.json();
+            setFormData({
+              title: data.title || '',
+              name: data.name || '',
+              description: data.description || '',
+              email: data.email || '',
+              github: data.github || '',
+              workHistory: data.workHistory?.length > 0 ? data.workHistory : [{ companyName: '', role: '', dateOfWork: '', description: '' }],
+              projects: data.projects?.length > 0 ? data.projects : [{ projectName: '', projectUrl: '', projectDescription: '' }],
+              achievements: data.achievements?.length > 0 ? data.achievements : [{ achievementName: '', achievementUrl: '', achievementDescription: '' }]
+            });
+            setIsEditing(true);
+          }
+        } catch (error) {
+          console.error('Failed to load resume:', error);
+        }
+      }
+      loadResume();
+    }
+  }, [resumeId]);
+
+  type ScalarField = 'title' | 'name' | 'description' | 'email' | 'github';
+  type WorkField = 'companyName' | 'role' | 'dateOfWork' | 'description';
+  type ProjectField = 'projectName' | 'projectUrl' | 'projectDescription';
+  type AchievementField = 'achievementName' | 'achievementUrl' | 'achievementDescription';
 
   const handleChange = (
     field: ScalarField,
@@ -35,35 +92,104 @@ export default function Home() {
     }));
   };
 
-  const handleListChange = (
-    field: ListField,
+
+  const handleWorkChange = (
     index: number,
-  ) => (event: ChangeEvent<HTMLTextAreaElement>) => {
+    field: WorkField,
+  ) => (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
     const value = event.target.value;
     setFormData((prev) => {
-      const updated = [...prev[field]];
-      updated[index] = value;
+      const updated = [...prev.workHistory];
+      updated[index] = { ...updated[index], [field]: value };
       return {
         ...prev,
-        [field]: updated,
+        workHistory: updated,
       };
     });
   };
 
-  const addListEntry = (field: ListField) => () => {
+  const handleProjectChange = (
+    index: number,
+    field: ProjectField,
+  ) => (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const value = event.target.value;
+    setFormData((prev) => {
+      const updated = [...prev.projects];
+      updated[index] = { ...updated[index], [field]: value };
+      return {
+        ...prev,
+        projects: updated,
+      };
+    });
+  };
+
+  const handleAchievementChange = (
+    index: number,
+    field: AchievementField,
+  ) => (event: ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
+    const value = event.target.value;
+    setFormData((prev) => {
+      const updated = [...prev.achievements];
+      updated[index] = { ...updated[index], [field]: value };
+      return {
+        ...prev,
+        achievements: updated,
+      };
+    });
+  };
+
+
+  const addWorkEntry = () => {
     setFormData((prev) => ({
       ...prev,
-      [field]: [...prev[field], ''],
+      workHistory: [...prev.workHistory, { companyName: '', role: '', dateOfWork: '', description: '' }],
     }));
   };
 
-  const removeListEntry = (field: ListField, index: number) => () => {
+  const addProjectEntry = () => {
+    setFormData((prev) => ({
+      ...prev,
+      projects: [...prev.projects, { projectName: '', projectUrl: '', projectDescription: '' }],
+    }));
+  };
+
+  const addAchievementEntry = () => {
+    setFormData((prev) => ({
+      ...prev,
+      achievements: [...prev.achievements, { achievementName: '', achievementUrl: '', achievementDescription: '' }],
+    }));
+  };
+
+
+  const removeWorkEntry = (index: number) => () => {
     setFormData((prev) => {
-      if (prev[field].length === 1) return prev;
-      const updated = prev[field].filter((_, idx) => idx !== index);
+      if (prev.workHistory.length === 1) return prev;
+      const updated = prev.workHistory.filter((_, idx) => idx !== index);
       return {
         ...prev,
-        [field]: updated,
+        workHistory: updated,
+      };
+    });
+  };
+
+  const removeProjectEntry = (index: number) => () => {
+    setFormData((prev) => {
+      if (prev.projects.length === 1) return prev;
+      const updated = prev.projects.filter((_, idx) => idx !== index);
+      return {
+        ...prev,
+        projects: updated,
+      };
+    });
+  };
+
+  const removeAchievementEntry = (index: number) => () => {
+    setFormData((prev) => {
+      if (prev.achievements.length === 1) return prev;
+      const updated = prev.achievements.filter((_, idx) => idx !== index);
+      return {
+        ...prev,
+        achievements: updated,
       };
     });
   };
@@ -74,13 +200,27 @@ export default function Home() {
 
     try {
       const payload = {
+        title: formData.title || 'Untitled Resume',
         name: formData.name,
         email: formData.email,
         github: formData.github,
         description: formData.description,
-        workHistory: formData.workHistory.filter((v) => v.trim().length > 0),
-        projects: formData.projects.filter((v) => v.trim().length > 0),
-        achievements: formData.achievements.filter((v) => v.trim().length > 0),
+        workHistory: formData.workHistory.filter((v) => 
+          v.companyName.trim().length > 0 || 
+          v.role.trim().length > 0 || 
+          v.dateOfWork.trim().length > 0 || 
+          v.description.trim().length > 0
+        ),
+        projects: formData.projects.filter((v) => 
+          v.projectName.trim().length > 0 || 
+          v.projectUrl.trim().length > 0 || 
+          v.projectDescription.trim().length > 0
+        ),
+        achievements: formData.achievements.filter((v) => 
+          v.achievementName.trim().length > 0 || 
+          v.achievementUrl.trim().length > 0 || 
+          v.achievementDescription.trim().length > 0
+        ),
       };
 
       const res = await fetch('/api/resumes', {
@@ -95,7 +235,12 @@ export default function Home() {
       }
 
       const data = await res.json();
-      setStatusMessage(`Resume saved. ID: ${data.id}`);
+      setStatusMessage(`Resume saved successfully!`);
+      
+      // Redirect to resumes page after a short delay
+      setTimeout(() => {
+        router.push('/resumes');
+      }, 1500);
     } catch (error: any) {
       console.error(error);
       setStatusMessage(`Error saving resume: ${error?.message ?? 'Unknown error'}`);
@@ -110,9 +255,27 @@ export default function Home() {
             <h1 className="text-4xl font-bold text-slate-800 dark:text-slate-100 mb-1">
               Resume AI Analyzer
             </h1>
-            <p className="text-lg text-slate-600 dark:text-slate-300">
+            <p className="text-lg text-slate-600 dark:text-slate-300 mb-3">
               analyze how your resume need to be changed using ai
             </p>
+            <SignedIn>
+              <div className="flex items-center justify-center gap-3">
+                <Link
+                  href="/"
+                  onClick={() => { setFormData({ title: '', name: '', description: '', email: '', github: '', workHistory: [{ companyName: '', role: '', dateOfWork: '', description: '' }], projects: [{ projectName: '', projectUrl: '', projectDescription: '' }], achievements: [{ achievementName: '', achievementUrl: '', achievementDescription: '' }] }); setIsEditing(false); }}
+                  className="text-sm font-medium text-sky-600 hover:text-sky-700"
+                >
+                  + New Resume
+                </Link>
+                <span className="text-slate-300">|</span>
+                <Link
+                  href="/resumes"
+                  className="text-sm font-medium text-sky-600 hover:text-sky-700"
+                >
+                  My Resumes
+                </Link>
+              </div>
+            </SignedIn>
           </div>
           <div className="ml-4">
             <SignedIn>
@@ -143,9 +306,25 @@ export default function Home() {
         <SignedIn>
           <section className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg p-8">
             <h2 className="text-2xl font-semibold text-slate-800 dark:text-slate-100 mb-6">
-              Build your resume snapshot
+              {isEditing ? 'Edit Resume' : 'Build your resume snapshot'}
             </h2>
             <form className="space-y-6" onSubmit={handleSubmit}>
+            <div className="flex flex-col">
+              <label htmlFor="title" className="text-sm font-medium text-slate-600 dark:text-slate-300 mb-2">
+                Resume Title *
+              </label>
+              <input
+                id="title"
+                name="title"
+                type="text"
+                required
+                placeholder="e.g. Software Engineer Resume 2024"
+                value={formData.title}
+                onChange={handleChange('title')}
+                className="rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-4 py-2 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+              />
+            </div>
+
             <div className="grid gap-6 md:grid-cols-2">
               <div className="flex flex-col">
                 <label htmlFor="name" className="text-sm font-medium text-slate-600 dark:text-slate-300 mb-2">
@@ -214,25 +393,72 @@ export default function Home() {
                   </label>
                   <button
                     type="button"
-                    onClick={addListEntry('workHistory')}
+                    onClick={addWorkEntry}
                     className="text-sm font-medium text-sky-600 hover:text-sky-700"
                   >
                     + Add role
                   </button>
                 </div>
                 {formData.workHistory.map((entry, index) => (
-                  <div key={`work-${index}`} className="flex flex-col gap-2">
-                    <textarea
-                      rows={4}
-                      placeholder="List roles, companies, and impact"
-                      value={entry}
-                      onChange={handleListChange('workHistory', index)}
-                      className="rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-4 py-2 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
-                    />
+                  <div key={`work-${index}`} className="flex flex-col gap-3 p-4 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50">
+                    <div className="grid gap-3 md:grid-cols-2">
+                      <div className="flex flex-col">
+                        <label htmlFor={`company-${index}`} className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+                          Company name
+                        </label>
+                        <input
+                          id={`company-${index}`}
+                          type="text"
+                          placeholder="e.g. Google"
+                          value={entry.companyName}
+                          onChange={handleWorkChange(index, 'companyName')}
+                          className="rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                        />
+                      </div>
+                      <div className="flex flex-col">
+                        <label htmlFor={`role-${index}`} className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+                          Role
+                        </label>
+                        <input
+                          id={`role-${index}`}
+                          type="text"
+                          placeholder="e.g. Senior Software Engineer"
+                          value={entry.role}
+                          onChange={handleWorkChange(index, 'role')}
+                          className="rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex flex-col">
+                      <label htmlFor={`date-${index}`} className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+                        Date of work
+                      </label>
+                      <input
+                        id={`date-${index}`}
+                        type="text"
+                        placeholder="e.g. Jan 2020 - Dec 2022"
+                        value={entry.dateOfWork}
+                        onChange={handleWorkChange(index, 'dateOfWork')}
+                        className="rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                      />
+                    </div>
+                    <div className="flex flex-col">
+                      <label htmlFor={`work-desc-${index}`} className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+                        Description
+                      </label>
+                      <textarea
+                        id={`work-desc-${index}`}
+                        rows={3}
+                        placeholder="Describe your responsibilities and achievements"
+                        value={entry.description}
+                        onChange={handleWorkChange(index, 'description')}
+                        className="rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                      />
+                    </div>
                     {formData.workHistory.length > 1 && (
                       <button
                         type="button"
-                        onClick={removeListEntry('workHistory', index)}
+                        onClick={removeWorkEntry(index)}
                         className="self-end text-xs font-medium text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
                       >
                         Remove
@@ -249,25 +475,57 @@ export default function Home() {
                   </label>
                   <button
                     type="button"
-                    onClick={addListEntry('projects')}
+                    onClick={addProjectEntry}
                     className="text-sm font-medium text-sky-600 hover:text-sky-700"
                   >
                     + Add project
                   </button>
                 </div>
                 {formData.projects.map((entry, index) => (
-                  <div key={`project-${index}`} className="flex flex-col gap-2">
-                    <textarea
-                      rows={4}
-                      placeholder="Describe standout projects and metrics"
-                      value={entry}
-                      onChange={handleListChange('projects', index)}
-                      className="rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-4 py-2 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
-                    />
+                  <div key={`project-${index}`} className="flex flex-col gap-3 p-4 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50">
+                    <div className="flex flex-col">
+                      <label htmlFor={`project-name-${index}`} className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+                        Project name
+                      </label>
+                      <input
+                        id={`project-name-${index}`}
+                        type="text"
+                        placeholder="e.g. E-commerce Platform"
+                        value={entry.projectName}
+                        onChange={handleProjectChange(index, 'projectName')}
+                        className="rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                      />
+                    </div>
+                    <div className="flex flex-col">
+                      <label htmlFor={`project-url-${index}`} className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+                        Project URL (optional)
+                      </label>
+                      <input
+                        id={`project-url-${index}`}
+                        type="url"
+                        placeholder="e.g. https://github.com/username/project"
+                        value={entry.projectUrl}
+                        onChange={handleProjectChange(index, 'projectUrl')}
+                        className="rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                      />
+                    </div>
+                    <div className="flex flex-col">
+                      <label htmlFor={`project-desc-${index}`} className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+                        Project description
+                      </label>
+                      <textarea
+                        id={`project-desc-${index}`}
+                        rows={3}
+                        placeholder="Describe the project, your role, and key achievements"
+                        value={entry.projectDescription}
+                        onChange={handleProjectChange(index, 'projectDescription')}
+                        className="rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                      />
+                    </div>
                     {formData.projects.length > 1 && (
                       <button
                         type="button"
-                        onClick={removeListEntry('projects', index)}
+                        onClick={removeProjectEntry(index)}
                         className="self-end text-xs font-medium text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
                       >
                         Remove
@@ -285,25 +543,57 @@ export default function Home() {
                 </label>
                 <button
                   type="button"
-                  onClick={addListEntry('achievements')}
+                  onClick={addAchievementEntry}
                   className="text-sm font-medium text-sky-600 hover:text-sky-700"
                 >
                   + Add achievement
                 </button>
               </div>
               {formData.achievements.map((entry, index) => (
-                <div key={`achievement-${index}`} className="flex flex-col gap-2">
-                  <textarea
-                    rows={3}
-                    placeholder="Awards, certifications, and key wins"
-                    value={entry}
-                    onChange={handleListChange('achievements', index)}
-                    className="rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-4 py-2 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
-                  />
+                <div key={`achievement-${index}`} className="flex flex-col gap-3 p-4 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50">
+                  <div className="flex flex-col">
+                    <label htmlFor={`achievement-name-${index}`} className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+                      Achievement name
+                    </label>
+                    <input
+                      id={`achievement-name-${index}`}
+                      type="text"
+                      placeholder="e.g. AWS Certified Solutions Architect"
+                      value={entry.achievementName}
+                      onChange={handleAchievementChange(index, 'achievementName')}
+                      className="rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                    />
+                  </div>
+                  <div className="flex flex-col">
+                    <label htmlFor={`achievement-url-${index}`} className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+                      Achievement URL (optional)
+                    </label>
+                    <input
+                      id={`achievement-url-${index}`}
+                      type="url"
+                      placeholder="e.g. https://www.credly.com/badges/..."
+                      value={entry.achievementUrl}
+                      onChange={handleAchievementChange(index, 'achievementUrl')}
+                      className="rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                    />
+                  </div>
+                  <div className="flex flex-col">
+                    <label htmlFor={`achievement-desc-${index}`} className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1">
+                      Achievement description
+                    </label>
+                    <textarea
+                      id={`achievement-desc-${index}`}
+                      rows={3}
+                      placeholder="Describe the achievement, award, or certification"
+                      value={entry.achievementDescription}
+                      onChange={handleAchievementChange(index, 'achievementDescription')}
+                      className="rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                    />
+                  </div>
                   {formData.achievements.length > 1 && (
                     <button
                       type="button"
-                      onClick={removeListEntry('achievements', index)}
+                      onClick={removeAchievementEntry(index)}
                       className="self-end text-xs font-medium text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
                     >
                       Remove
@@ -328,6 +618,172 @@ export default function Home() {
                 )}
               </div>
             </form>
+          </section>
+
+          {/* Resume Preview */}
+          <section className="mt-8 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg p-8">
+            <h2 className="text-2xl font-semibold text-slate-800 dark:text-slate-100 mb-6">
+              Resume Preview
+            </h2>
+            
+            <div className="space-y-6 text-slate-700 dark:text-slate-200">
+              {/* Header Section */}
+              <div className="border-b border-slate-200 dark:border-slate-700 pb-4">
+                <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-50 mb-2">
+                  {formData.name || 'Your Name'}
+                </h1>
+                <div className="flex flex-wrap gap-3 text-sm">
+                  {formData.email && (
+                    <span className="flex items-center gap-1">
+                      📧 {formData.email}
+                    </span>
+                  )}
+                  {formData.github && (
+                    <a 
+                      href={formData.github} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="flex items-center gap-1 text-sky-600 hover:text-sky-700"
+                    >
+                      🔗 GitHub
+                    </a>
+                  )}
+                </div>
+              </div>
+
+              {/* Professional Summary */}
+              {formData.description && (
+                <div>
+                  <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-100 mb-2">
+                    Professional Summary
+                  </h3>
+                  <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                    {formData.description}
+                  </p>
+                </div>
+              )}
+
+              {/* Work History */}
+              {formData.workHistory.some(w => w.companyName || w.role || w.dateOfWork || w.description) && (
+                <div>
+                  <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-100 mb-3">
+                    Work Experience
+                  </h3>
+                  <div className="space-y-4">
+                    {formData.workHistory.map((work, index) => (
+                      (work.companyName || work.role || work.dateOfWork || work.description) && (
+                        <div key={`preview-work-${index}`} className="border-l-2 border-sky-500 pl-4">
+                          <div className="flex justify-between items-start mb-1">
+                            <h4 className="font-semibold text-slate-900 dark:text-slate-50">
+                              {work.role || 'Role Title'}
+                            </h4>
+                            {work.dateOfWork && (
+                              <span className="text-sm text-slate-500 dark:text-slate-400">
+                                {work.dateOfWork}
+                              </span>
+                            )}
+                          </div>
+                          {work.companyName && (
+                            <p className="text-sm font-medium text-slate-600 dark:text-slate-300 mb-2">
+                              {work.companyName}
+                            </p>
+                          )}
+                          {work.description && (
+                            <p className="text-sm text-slate-600 dark:text-slate-300 whitespace-pre-wrap">
+                              {work.description}
+                            </p>
+                          )}
+                        </div>
+                      )
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Projects */}
+              {formData.projects.some(p => p.projectName || p.projectUrl || p.projectDescription) && (
+                <div>
+                  <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-100 mb-3">
+                    Projects
+                  </h3>
+                  <div className="space-y-4">
+                    {formData.projects.map((project, index) => (
+                      (project.projectName || project.projectUrl || project.projectDescription) && (
+                        <div key={`preview-project-${index}`} className="border-l-2 border-emerald-500 pl-4">
+                          <div className="flex items-start gap-2 mb-1">
+                            <h4 className="font-semibold text-slate-900 dark:text-slate-50">
+                              {project.projectName || 'Project Name'}
+                            </h4>
+                            {project.projectUrl && (
+                              <a 
+                                href={project.projectUrl} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="text-xs text-sky-600 hover:text-sky-700"
+                              >
+                                🔗
+                              </a>
+                            )}
+                          </div>
+                          {project.projectDescription && (
+                            <p className="text-sm text-slate-600 dark:text-slate-300 whitespace-pre-wrap">
+                              {project.projectDescription}
+                            </p>
+                          )}
+                        </div>
+                      )
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Achievements */}
+              {formData.achievements.some(a => a.achievementName || a.achievementUrl || a.achievementDescription) && (
+                <div>
+                  <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-100 mb-3">
+                    Achievements
+                  </h3>
+                  <div className="space-y-4">
+                    {formData.achievements.map((achievement, index) => (
+                      (achievement.achievementName || achievement.achievementUrl || achievement.achievementDescription) && (
+                        <div key={`preview-achievement-${index}`} className="border-l-2 border-amber-500 pl-4">
+                          <div className="flex items-start gap-2 mb-1">
+                            <h4 className="font-semibold text-slate-900 dark:text-slate-50">
+                              {achievement.achievementName || 'Achievement Name'}
+                            </h4>
+                            {achievement.achievementUrl && (
+                              <a 
+                                href={achievement.achievementUrl} 
+                                target="_blank" 
+                                rel="noopener noreferrer"
+                                className="text-xs text-sky-600 hover:text-sky-700"
+                              >
+                                🔗
+                              </a>
+                            )}
+                          </div>
+                          {achievement.achievementDescription && (
+                            <p className="text-sm text-slate-600 dark:text-slate-300 whitespace-pre-wrap">
+                              {achievement.achievementDescription}
+                            </p>
+                          )}
+                        </div>
+                      )
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              {/* Empty State */}
+              {!formData.name && !formData.email && !formData.description && 
+               !formData.workHistory.some(w => w.companyName || w.role) &&
+               !formData.projects.some(p => p.projectName) &&
+               !formData.achievements.some(a => a.achievementName) && (
+                <div className="text-center py-8 text-slate-400 dark:text-slate-500">
+                  <p className="text-sm">Fill out the form above to see your resume preview here</p>
+                </div>
+              )}
+            </div>
           </section>
         </SignedIn>
       </div>
