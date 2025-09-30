@@ -184,6 +184,71 @@ jobs:
           node scripts/generate-svg-icons-with-gradient.js
 
 
+      - name: "🔐 Set Vercel Environment Variables"
+        env:
+          VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          POSTGRES_URL: ${{ secrets.POSTGRES_URL }}
+          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
+          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
+          TOGETHER_API_KEY: ${{ secrets.TOGETHER_API_KEY }}
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+        run: |
+          PROJECT_ID="${{ steps.generate-vercel-project.outputs.project_id }}"
+          
+          echo "🔐 Setting environment variables in Vercel project..."
+          
+          # Function to set or update environment variable
+          set_env_var() {
+            local key=$1
+            local value=$2
+            local type=${3:-"encrypted"}  # encrypted, secret, or plain
+            
+            if [ -z "$value" ]; then
+              echo "⚠️ Skipping $key (empty value)"
+              return
+            fi
+            
+            # Check if env var exists
+            EXISTING=$(curl -s -X GET \
+              "https://api.vercel.com/v9/projects/${PROJECT_ID}/env" \
+              -H "Authorization: Bearer ${VERCEL_TOKEN}" \
+              -H "Content-Type: application/json" | jq -r ".envs[] | select(.key==\"$key\") | .id")
+            
+            if [ -n "$EXISTING" ] && [ "$EXISTING" != "null" ]; then
+              echo "✓ Updating $key"
+              curl -s -X PATCH \
+                "https://api.vercel.com/v9/projects/${PROJECT_ID}/env/${EXISTING}" \
+                -H "Authorization: Bearer ${VERCEL_TOKEN}" \
+                -H "Content-Type: application/json" \
+                -d "{
+                  \"value\": \"$value\",
+                  \"type\": \"$type\",
+                  \"target\": [\"production\", \"preview\", \"development\"]
+                }" > /dev/null
+            else
+              echo "✓ Creating $key"
+              curl -s -X POST \
+                "https://api.vercel.com/v10/projects/${PROJECT_ID}/env" \
+                -H "Authorization: Bearer ${VERCEL_TOKEN}" \
+                -H "Content-Type: application/json" \
+                -d "{
+                  \"key\": \"$key\",
+                  \"value\": \"$value\",
+                  \"type\": \"$type\",
+                  \"target\": [\"production\", \"preview\", \"development\"]
+                }" > /dev/null
+            fi
+          }
+          
+          # Set all environment variables
+          set_env_var "POSTGRES_URL" "$POSTGRES_URL" "encrypted"
+          set_env_var "NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY" "$NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY" "plain"
+          set_env_var "CLERK_SECRET_KEY" "$CLERK_SECRET_KEY" "encrypted"
+          set_env_var "TOGETHER_API_KEY" "$TOGETHER_API_KEY" "encrypted"
+          set_env_var "GEMINI_API_KEY" "$GEMINI_API_KEY" "encrypted"
+          
+          echo "✅ Environment variables configured in Vercel"
+
       - name: "🏗️ Build application"
         run: pnpm run build
         env:
