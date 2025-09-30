@@ -2,10 +2,5 @@
   "framework": "nextjs",
   "buildCommand": "pnpm run build",
   "outputDirectory": ".next",
-  "installCommand": "pnpm install --frozen-lockfile",
-  "functions": {
-    "src/app/mcp/route.ts": {
-      "runtime": "nodejs20.x"
-    }
-  }
+  "installCommand": "pnpm install --frozen-lockfile"
 }
