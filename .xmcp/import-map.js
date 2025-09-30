@@ -7,4 +7,8 @@ export const prompts = {
 "src/prompts/review-code.ts": () => import("../src/prompts/review-code.ts"),
 };
 
+export const resources = {
+
+};
+
 
