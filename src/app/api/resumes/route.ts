@@ -5,21 +5,41 @@ import { auth } from '@clerk/nextjs/server';
 
 export const runtime = 'nodejs';
 
+const workHistorySchema = z.object({
+  companyName: z.string(),
+  role: z.string(),
+  dateOfWork: z.string(),
+  description: z.string(),
+});
+
+const projectSchema = z.object({
+  projectName: z.string(),
+  projectUrl: z.string().optional(),
+  projectDescription: z.string(),
+});
+
+const achievementSchema = z.object({
+  achievementName: z.string(),
+  achievementUrl: z.string().optional(),
+  achievementDescription: z.string(),
+});
+
 const resumeSchema = z.object({
+  title: z.string().min(1),
   name: z.string().min(1),
   email: z.string().email(),
   github: z.string().url().optional().or(z.literal('')),
   description: z.string().optional().or(z.literal('')),
-  workHistory: z.array(z.string()).default([]),
-  projects: z.array(z.string()).default([]),
-  achievements: z.array(z.string()).default([]),
+  workHistory: z.array(workHistorySchema).default([]),
+  projects: z.array(projectSchema).default([]),
+  achievements: z.array(achievementSchema).default([]),
 });
 
 type ResumeInput = z.infer<typeof resumeSchema>;
 
 export async function POST(req: Request) {
   try {
-    const { userId } = auth();
+    const { userId } = await auth();
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -35,6 +55,7 @@ export async function POST(req: Request) {
 
     const id = await createResume({
       userId,
+      title: data.title,
       name: data.name,
       email: data.email,
       github: (data.github && data.github.length > 0) ? data.github : undefined,
@@ -56,13 +77,13 @@ export async function POST(req: Request) {
 
 export async function GET() {
   try {
-    const { userId } = auth();
+    const { userId } = await auth();
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
-    const rows = await listResumes(userId, 20);
-    return NextResponse.json({ items: rows });
+    const rows = await listResumes(userId, 50);
+    return NextResponse.json({ resumes: rows });
   } catch (err) {
     console.error('Error listing resumes', err);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });

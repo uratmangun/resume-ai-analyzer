@@ -1,15 +1,35 @@
 import { db, schema } from './index';
 import { eq } from 'drizzle-orm';
 
+export type WorkHistoryEntry = {
+  companyName: string;
+  role: string;
+  dateOfWork: string;
+  description: string;
+};
+
+export type ProjectEntry = {
+  projectName: string;
+  projectUrl?: string;
+  projectDescription: string;
+};
+
+export type AchievementEntry = {
+  achievementName: string;
+  achievementUrl?: string;
+  achievementDescription: string;
+};
+
 export type NewResumePayload = {
   userId: string;
+  title: string;
   name: string;
   email: string;
   github?: string;
   description?: string;
-  workHistory: string[];
-  projects: string[];
-  achievements: string[];
+  workHistory: WorkHistoryEntry[];
+  projects: ProjectEntry[];
+  achievements: AchievementEntry[];
 };
 
 export async function createResume(data: NewResumePayload) {
@@ -17,6 +37,7 @@ export async function createResume(data: NewResumePayload) {
     .insert(schema.resumes)
     .values({
       userId: data.userId,
+      title: data.title,
       name: data.name,
       email: data.email,
       github: data.github,
@@ -26,14 +47,30 @@ export async function createResume(data: NewResumePayload) {
 
   const resumeId = resume.id;
 
-  const insertWork = data.workHistory.map((content) =>
-    db.insert(schema.workHistory).values({ resumeId, content })
+  const insertWork = data.workHistory.map((entry) =>
+    db.insert(schema.workHistory).values({
+      resumeId,
+      companyName: entry.companyName,
+      role: entry.role,
+      dateOfWork: entry.dateOfWork,
+      description: entry.description,
+    })
   );
-  const insertProjects = data.projects.map((content) =>
-    db.insert(schema.projects).values({ resumeId, content })
+  const insertProjects = data.projects.map((entry) =>
+    db.insert(schema.projects).values({
+      resumeId,
+      projectName: entry.projectName,
+      projectUrl: entry.projectUrl,
+      projectDescription: entry.projectDescription,
+    })
   );
-  const insertAchievements = data.achievements.map((content) =>
-    db.insert(schema.achievements).values({ resumeId, content })
+  const insertAchievements = data.achievements.map((entry) =>
+    db.insert(schema.achievements).values({
+      resumeId,
+      achievementName: entry.achievementName,
+      achievementUrl: entry.achievementUrl,
+      achievementDescription: entry.achievementDescription,
+    })
   );
 
   await Promise.all([...insertWork, ...insertProjects, ...insertAchievements]);
@@ -53,9 +90,22 @@ export async function getResume(id: string) {
 
   return {
     ...resume,
-    workHistory: work.map((w) => w.content),
-    projects: proj.map((p) => p.content),
-    achievements: ach.map((a) => a.content),
+    workHistory: work.map((w) => ({
+      companyName: w.companyName,
+      role: w.role,
+      dateOfWork: w.dateOfWork,
+      description: w.description,
+    })),
+    projects: proj.map((p) => ({
+      projectName: p.projectName,
+      projectUrl: p.projectUrl,
+      projectDescription: p.projectDescription,
+    })),
+    achievements: ach.map((a) => ({
+      achievementName: a.achievementName,
+      achievementUrl: a.achievementUrl,
+      achievementDescription: a.achievementDescription,
+    })),
   };
 }
 
