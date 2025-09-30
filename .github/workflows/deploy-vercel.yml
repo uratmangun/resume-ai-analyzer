@@ -78,6 +78,7 @@ jobs:
         id: generate-vercel-project
         env:
           VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+          POSTGRES_URL: ${{ secrets.POSTGRES_URL }}
         run: |
           # If a matching project already exists, reuse it; otherwise create a new project
           EXISTING_PROJECT_ID="${{ steps.cleanup-projects.outputs.existing_project_id }}"
