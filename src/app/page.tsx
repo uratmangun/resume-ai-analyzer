@@ -7,6 +7,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport } from 'ai';
+import { toast } from 'sonner';
 
 type WorkHistoryEntry = {
   companyName: string;
@@ -45,52 +46,65 @@ function HomeContent() {
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
 
-  const [titleContext, setTitleContext] = useState<string>('');
+  // AI modal state for description editing mock
+  const [isAIModalOpen, setIsAIModalOpen] = useState(false);
+  const [translateFromLanguage, setTranslateFromLanguage] = useState('');
+  const [translateToLanguage, setTranslateToLanguage] = useState('');
+  const [aiEditedText, setAiEditedText] = useState('');
+  const [aiEditMode, setAiEditMode] = useState<'proofread' | 'translate'>('proofread');
+  const [currentField, setCurrentField] = useState<{
+    type: 'description' | 'workHistory' | 'project' | 'achievement';
+    index?: number;
+  }>({ type: 'description' });
 
-  // AI chat hook for title generation
-  const { messages: aiMessages, sendMessage: sendAIMessage, status: aiStatus } = useChat({
-    id: 'title-generator',
+  // AI chat hook for proofreading
+  const { sendMessage: sendProofreadMessage, status: proofreadStatus } = useChat({
+    id: 'ai-proofread',
     transport: new DefaultChatTransport({
-      api: '/api/ai-suggest-title',
-      prepareSendMessagesRequest: ({ messages }) => ({
-        body: {
-          messages,
-          context: titleContext, // Include context in the request
-        },
-      }),
+      api: '/api/ai-proofread',
     }),
     onFinish: (result) => {
-      // Extract the generated title from the AI response
       const lastMessage = result.messages[result.messages.length - 1];
       if (lastMessage && lastMessage.role === 'assistant') {
-        let titleText = lastMessage.parts
-          .filter(part => part.type === 'text')
-          .map(part => part.type === 'text' ? part.text : '')
+        let text = lastMessage.parts
+          .filter((part) => part.type === 'text')
+          .map((part) => (part.type === 'text' ? part.text : ''))
           .join('')
           .trim();
-        
-        if (titleText) {
-          // Clean up the title with regex
-          // Remove quotes at start/end
-          titleText = titleText.replace(/^["']|["']$/g, '');
-          // Remove character count like "(51 characters)"
-          titleText = titleText.replace(/\s*\(\d+\s*characters?\)\s*/gi, '');
-          // Remove any text in parentheses at the end (suggestions, notes, etc.)
-          titleText = titleText.replace(/\s*\([^)]*\)\s*$/g, '');
-          // Remove asterisks (markdown emphasis)
-          titleText = titleText.replace(/\*/g, '');
-          // Clean up any extra whitespace
-          titleText = titleText.trim();
-          
-          if (titleText) {
-            setFormData(prev => ({ ...prev, title: titleText }));
-          }
-        }
+
+        setAiEditedText(text);
+      }
+    },
+    onError: (error) => {
+      console.error('AI proofread error:', error);
+      toast.error('Proofread Failed', {
+        description: error?.message || 'Failed to proofread text. Please try again.',
+      });
+      setAiEditedText('Proofreading failed. Please try again.');
+    },
+  });
+
+  // AI chat hook for translating
+  const { sendMessage: sendTranslateMessageRaw, status: translateStatus } = useChat({
+    id: 'ai-translate',
+    transport: new DefaultChatTransport({
+      api: '/api/ai-translate',
+    }),
+    onFinish: (result) => {
+      const lastMessage = result.messages[result.messages.length - 1];
+      if (lastMessage && lastMessage.role === 'assistant') {
+        let text = lastMessage.parts
+          .filter((part) => part.type === 'text')
+          .map((part) => (part.type === 'text' ? part.text : ''))
+          .join('')
+          .trim();
+
+        setAiEditedText(text);
       }
     },
   });
 
-  const isGeneratingTitle = aiStatus === 'submitted' || aiStatus === 'streaming';
+  const isEditingText = proofreadStatus === 'submitted' || proofreadStatus === 'streaming' || translateStatus === 'submitted' || translateStatus === 'streaming';
 
   useEffect(() => {
     const initializeSdk = async () => {
@@ -243,24 +257,116 @@ function HomeContent() {
     });
   };
 
-  const handleAISuggestTitle = () => {
-    // Build context from form data
-    const context = `
-Name: ${formData.name || 'Not provided'}
-Description: ${formData.description || 'Not provided'}
-Work History: ${formData.workHistory.map(w => `${w.role} at ${w.companyName}`).filter(Boolean).join(', ') || 'Not provided'}
-Projects: ${formData.projects.map(p => p.projectName).filter(Boolean).join(', ') || 'Not provided'}
-    `.trim();
-
-    // Update context and send message
-    setTitleContext(context);
+  // Mock actions for AI modal
+  const openAIModal = (type: 'description' | 'workHistory' | 'project' | 'achievement', index?: number) => {
+    setCurrentField({ type, index });
+    setAiEditedText('');
+    setIsAIModalOpen(true);
+  };
+  const closeAIModal = () => setIsAIModalOpen(false);
+  
+  const getCurrentText = () => {
+    if (currentField.type === 'description') return formData.description;
+    if (currentField.type === 'workHistory' && currentField.index !== undefined) {
+      return formData.workHistory[currentField.index]?.description || '';
+    }
+    if (currentField.type === 'project' && currentField.index !== undefined) {
+      return formData.projects[currentField.index]?.projectDescription || '';
+    }
+    if (currentField.type === 'achievement' && currentField.index !== undefined) {
+      return formData.achievements[currentField.index]?.achievementDescription || '';
+    }
+    return '';
+  };
+  
+  const handleProofread = () => {
+    const base = getCurrentText()?.trim();
+    if (!base) {
+      setAiEditedText('No text provided.');
+      return;
+    }
+    setAiEditMode('proofread');
+    sendProofreadMessage({ text: base });
+  };
+  const handleTranslate = async () => {
+    const base = getCurrentText()?.trim();
+    if (!base) {
+      setAiEditedText('No text provided.');
+      return;
+    }
+    setAiEditMode('translate');
     
-    // Use setTimeout to ensure state update completes
-    setTimeout(() => {
-      sendAIMessage({
-        text: 'Generate a professional resume title based on the information provided.',
+    // Manually call the API with current language values
+    try {
+      const response = await fetch('/api/ai-translate', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          messages: [{
+            id: Date.now().toString(),
+            role: 'user',
+            parts: [{ type: 'text', text: base }]
+          }],
+          fromLanguage: translateFromLanguage,
+          toLanguage: translateToLanguage,
+        }),
       });
-    }, 0);
+
+      if (!response.ok) throw new Error('Translation failed');
+      
+      const reader = response.body?.getReader();
+      const decoder = new TextDecoder();
+      let result = '';
+      let buffer = '';
+
+      if (reader) {
+        setAiEditedText('Translating...');
+        
+        while (true) {
+          const { done, value } = await reader.read();
+          if (done) break;
+          
+          buffer += decoder.decode(value, { stream: true });
+          const lines = buffer.split('\n');
+          buffer = lines.pop() || ''; // Keep incomplete line in buffer
+          
+          for (const line of lines) {
+            if (!line.trim() || line === 'data: [DONE]') continue;
+            
+            // Parse Server-Sent Events format
+            if (line.startsWith('data: ')) {
+              const jsonStr = line.substring(6); // Remove 'data: ' prefix
+              try {
+                const data = JSON.parse(jsonStr);
+                
+                // Handle errors in stream
+                if (data.type === 'error') {
+                  toast.error('Translation Error', {
+                    description: data.errorText || 'An error occurred during translation',
+                  });
+                  setAiEditedText('Translation failed. Please try again.');
+                  return;
+                }
+                
+                // Handle text-delta events for streaming translation
+                if (data.type === 'text-delta' && data.delta) {
+                  result += data.delta;
+                  setAiEditedText(result);
+                }
+              } catch (e) {
+                console.error('Parse error:', e, 'Line:', jsonStr);
+              }
+            }
+          }
+        }
+      }
+    } catch (error: any) {
+      console.error('Translation error:', error);
+      toast.error('Translation Failed', {
+        description: error?.message || 'An unexpected error occurred',
+      });
+      setAiEditedText('Translation failed. Please try again.');
+    }
   };
 
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
@@ -382,36 +488,16 @@ Projects: ${formData.projects.map(p => p.projectName).filter(Boolean).join(', ')
               <label htmlFor="title" className="text-sm font-medium text-slate-600 dark:text-slate-300 mb-2">
                 Resume Title *
               </label>
-              <div className="relative">
-                <input
-                  id="title"
-                  name="title"
-                  type="text"
-                  required
-                  placeholder="e.g. Software Engineer Resume 2024"
-                  value={formData.title}
-                  onChange={handleChange('title')}
-                  className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-4 py-2 pr-20 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
-                />
-                <button
-                  type="button"
-                  onClick={handleAISuggestTitle}
-                  disabled={isGeneratingTitle}
-                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md bg-gradient-to-r from-sky-500 to-blue-600 px-3 py-1 text-xs font-medium text-white hover:from-sky-600 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-sky-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
-                  title="Generate title with AI"
-                >
-                  {isGeneratingTitle ? (
-                    <span className="flex items-center gap-1">
-                      <svg className="animate-spin h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
-                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
-                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                      </svg>
-                    </span>
-                  ) : (
-                    '✨ AI'
-                  )}
-                </button>
-              </div>
+              <input
+                id="title"
+                name="title"
+                type="text"
+                required
+                placeholder="e.g. Software Engineer Resume 2024"
+                value={formData.title}
+                onChange={handleChange('title')}
+                className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-4 py-2 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+              />
             </div>
 
             <div className="grid gap-6 md:grid-cols-2">
@@ -472,6 +558,15 @@ Projects: ${formData.projects.map(p => p.projectName).filter(Boolean).join(', ')
                 onChange={handleChange('description')}
                 className="rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-4 py-2 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
               />
+              <div className="mt-2">
+                <button
+                  type="button"
+                  onClick={() => openAIModal('description')}
+                  className="inline-flex items-center rounded-md bg-sky-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-400"
+                >
+                  AI
+                </button>
+              </div>
             </div>
 
             <div className="flex flex-col gap-6">
@@ -543,6 +638,13 @@ Projects: ${formData.projects.map(p => p.projectName).filter(Boolean).join(', ')
                         onChange={handleWorkChange(index, 'description')}
                         className="rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
                       />
+                      <button
+                        type="button"
+                        onClick={() => openAIModal('workHistory', index)}
+                        className="mt-2 self-start inline-flex items-center rounded-md bg-sky-600 px-2 py-1 text-xs font-medium text-white hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-400"
+                      >
+                        AI
+                      </button>
                     </div>
                     {formData.workHistory.length > 1 && (
                       <button
@@ -610,6 +712,13 @@ Projects: ${formData.projects.map(p => p.projectName).filter(Boolean).join(', ')
                         onChange={handleProjectChange(index, 'projectDescription')}
                         className="rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
                       />
+                      <button
+                        type="button"
+                        onClick={() => openAIModal('project', index)}
+                        className="mt-2 self-start inline-flex items-center rounded-md bg-sky-600 px-2 py-1 text-xs font-medium text-white hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-400"
+                      >
+                        AI
+                      </button>
                     </div>
                     {formData.projects.length > 1 && (
                       <button
@@ -678,6 +787,13 @@ Projects: ${formData.projects.map(p => p.projectName).filter(Boolean).join(', ')
                       onChange={handleAchievementChange(index, 'achievementDescription')}
                       className="rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
                     />
+                    <button
+                      type="button"
+                      onClick={() => openAIModal('achievement', index)}
+                      className="mt-2 self-start inline-flex items-center rounded-md bg-sky-600 px-2 py-1 text-xs font-medium text-white hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-400"
+                    >
+                      AI
+                    </button>
                   </div>
                   {formData.achievements.length > 1 && (
                     <button
@@ -708,6 +824,117 @@ Projects: ${formData.projects.map(p => p.projectName).filter(Boolean).join(', ')
               </div>
             </form>
           </section>
+
+          {isAIModalOpen && (
+            <div className="fixed inset-0 z-50 flex items-center justify-center">
+              <div className="absolute inset-0 bg-black/50" onClick={closeAIModal} />
+              <div className="relative z-10 w-full max-w-2xl rounded-xl bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 shadow-xl">
+                <div className="flex items-center justify-between p-4 border-b border-slate-200 dark:border-slate-700">
+                  <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-100">AI Assistant</h3>
+                  <button
+                    type="button"
+                    onClick={closeAIModal}
+                    className="rounded-md px-2 py-1 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 focus:outline-none"
+                  >
+                    ✕
+                  </button>
+                </div>
+                <div className="p-4 space-y-4">
+                  <div className="flex items-end gap-3 flex-wrap">
+                    <button
+                      type="button"
+                      onClick={handleProofread}
+                      className="rounded-md bg-sky-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-400"
+                    >
+                      {isEditingText && aiEditMode === 'proofread' ? 'Processing…' : 'Proofread'}
+                    </button>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <button
+                        type="button"
+                        onClick={handleTranslate}
+                        className="rounded-md bg-sky-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-400"
+                      >
+                        {isEditingText && aiEditMode === 'translate' ? 'Processing…' : 'Translate'}
+                      </button>
+                      <input
+                        type="text"
+                        placeholder="From language"
+                        value={translateFromLanguage}
+                        onChange={(e) => setTranslateFromLanguage(e.target.value)}
+                        className="rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-1.5 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                      />
+                      <input
+                        type="text"
+                        placeholder="To language"
+                        value={translateToLanguage}
+                        onChange={(e) => setTranslateToLanguage(e.target.value)}
+                        className="rounded-md border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-1.5 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="grid gap-3 md:grid-cols-2">
+                    <div className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 p-3">
+                      <div className="text-xs font-medium text-slate-600 dark:text-slate-300 mb-2">Original text</div>
+                      <div className="text-sm text-slate-700 dark:text-slate-200 whitespace-pre-wrap min-h-[6rem]">
+                        {getCurrentText() || 'No text provided yet.'}
+                      </div>
+                    </div>
+                    <div className="rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 p-3">
+                      <div className="text-xs font-medium text-slate-600 dark:text-slate-300 mb-2">AI edit</div>
+                      <div className="text-sm text-slate-700 dark:text-slate-200 whitespace-pre-wrap min-h-[6rem]">
+                        {isEditingText ? 'Generating…' : (aiEditedText || 'AI output will appear here.')}
+                      </div>
+                    </div>
+                  </div>
+                </div>
+                <div className="flex justify-between gap-2 p-4 border-t border-slate-200 dark:border-slate-700">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (aiEditedText && !aiEditedText.includes('failed')) {
+                        if (currentField.type === 'description') {
+                          setFormData(prev => ({ ...prev, description: aiEditedText }));
+                        } else if (currentField.type === 'workHistory' && currentField.index !== undefined) {
+                          setFormData(prev => {
+                            const updated = [...prev.workHistory];
+                            updated[currentField.index!] = { ...updated[currentField.index!], description: aiEditedText };
+                            return { ...prev, workHistory: updated };
+                          });
+                        } else if (currentField.type === 'project' && currentField.index !== undefined) {
+                          setFormData(prev => {
+                            const updated = [...prev.projects];
+                            updated[currentField.index!] = { ...updated[currentField.index!], projectDescription: aiEditedText };
+                            return { ...prev, projects: updated };
+                          });
+                        } else if (currentField.type === 'achievement' && currentField.index !== undefined) {
+                          setFormData(prev => {
+                            const updated = [...prev.achievements];
+                            updated[currentField.index!] = { ...updated[currentField.index!], achievementDescription: aiEditedText };
+                            return { ...prev, achievements: updated };
+                          });
+                        }
+                        toast.success('Text Applied', {
+                          description: 'AI-generated text has been applied to the textarea',
+                        });
+                      }
+                    }}
+                    disabled={!aiEditedText || aiEditedText.includes('failed') || isEditingText}
+                    className="rounded-md bg-sky-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-400 disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    Apply to Textarea
+                  </button>
+                  <button
+                    type="button"
+                    onClick={closeAIModal}
+                    className="rounded-md px-3 py-1.5 text-sm font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 focus:outline-none"
+                  >
+                    Close
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
 
           {/* Resume Preview */}
           <section className="mt-8 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg p-8">
