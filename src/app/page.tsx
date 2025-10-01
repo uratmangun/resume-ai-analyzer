@@ -5,6 +5,8 @@ import { sdk } from '@farcaster/miniapp-sdk'
 import { SignedIn, SignedOut, SignInButton, UserButton } from '@clerk/nextjs';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { useChat } from '@ai-sdk/react';
+import { DefaultChatTransport } from 'ai';
 
 type WorkHistoryEntry = {
   companyName: string;
@@ -42,6 +44,53 @@ function HomeContent() {
   });
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [isEditing, setIsEditing] = useState(false);
+
+  const [titleContext, setTitleContext] = useState<string>('');
+
+  // AI chat hook for title generation
+  const { messages: aiMessages, sendMessage: sendAIMessage, status: aiStatus } = useChat({
+    id: 'title-generator',
+    transport: new DefaultChatTransport({
+      api: '/api/ai-suggest-title',
+      prepareSendMessagesRequest: ({ messages }) => ({
+        body: {
+          messages,
+          context: titleContext, // Include context in the request
+        },
+      }),
+    }),
+    onFinish: (result) => {
+      // Extract the generated title from the AI response
+      const lastMessage = result.messages[result.messages.length - 1];
+      if (lastMessage && lastMessage.role === 'assistant') {
+        let titleText = lastMessage.parts
+          .filter(part => part.type === 'text')
+          .map(part => part.type === 'text' ? part.text : '')
+          .join('')
+          .trim();
+        
+        if (titleText) {
+          // Clean up the title with regex
+          // Remove quotes at start/end
+          titleText = titleText.replace(/^["']|["']$/g, '');
+          // Remove character count like "(51 characters)"
+          titleText = titleText.replace(/\s*\(\d+\s*characters?\)\s*/gi, '');
+          // Remove any text in parentheses at the end (suggestions, notes, etc.)
+          titleText = titleText.replace(/\s*\([^)]*\)\s*$/g, '');
+          // Remove asterisks (markdown emphasis)
+          titleText = titleText.replace(/\*/g, '');
+          // Clean up any extra whitespace
+          titleText = titleText.trim();
+          
+          if (titleText) {
+            setFormData(prev => ({ ...prev, title: titleText }));
+          }
+        }
+      }
+    },
+  });
+
+  const isGeneratingTitle = aiStatus === 'submitted' || aiStatus === 'streaming';
 
   useEffect(() => {
     const initializeSdk = async () => {
@@ -194,6 +243,26 @@ function HomeContent() {
     });
   };
 
+  const handleAISuggestTitle = () => {
+    // Build context from form data
+    const context = `
+Name: ${formData.name || 'Not provided'}
+Description: ${formData.description || 'Not provided'}
+Work History: ${formData.workHistory.map(w => `${w.role} at ${w.companyName}`).filter(Boolean).join(', ') || 'Not provided'}
+Projects: ${formData.projects.map(p => p.projectName).filter(Boolean).join(', ') || 'Not provided'}
+    `.trim();
+
+    // Update context and send message
+    setTitleContext(context);
+    
+    // Use setTimeout to ensure state update completes
+    setTimeout(() => {
+      sendAIMessage({
+        text: 'Generate a professional resume title based on the information provided.',
+      });
+    }, 0);
+  };
+
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
     setStatusMessage('Saving resume...');
@@ -313,16 +382,36 @@ function HomeContent() {
               <label htmlFor="title" className="text-sm font-medium text-slate-600 dark:text-slate-300 mb-2">
                 Resume Title *
               </label>
-              <input
-                id="title"
-                name="title"
-                type="text"
-                required
-                placeholder="e.g. Software Engineer Resume 2024"
-                value={formData.title}
-                onChange={handleChange('title')}
-                className="rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-4 py-2 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
-              />
+              <div className="relative">
+                <input
+                  id="title"
+                  name="title"
+                  type="text"
+                  required
+                  placeholder="e.g. Software Engineer Resume 2024"
+                  value={formData.title}
+                  onChange={handleChange('title')}
+                  className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-4 py-2 pr-20 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                />
+                <button
+                  type="button"
+                  onClick={handleAISuggestTitle}
+                  disabled={isGeneratingTitle}
+                  className="absolute right-2 top-1/2 -translate-y-1/2 rounded-md bg-gradient-to-r from-sky-500 to-blue-600 px-3 py-1 text-xs font-medium text-white hover:from-sky-600 hover:to-blue-700 focus:outline-none focus:ring-2 focus:ring-sky-400 disabled:opacity-50 disabled:cursor-not-allowed transition-all"
+                  title="Generate title with AI"
+                >
+                  {isGeneratingTitle ? (
+                    <span className="flex items-center gap-1">
+                      <svg className="animate-spin h-3 w-3" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                        <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                        <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                      </svg>
+                    </span>
+                  ) : (
+                    '✨ AI'
+                  )}
+                </button>
+              </div>
             </div>
 
             <div className="grid gap-6 md:grid-cols-2">
