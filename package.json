@@ -7,7 +7,7 @@
   ],
   "scripts": {
     "dev": "xmcp dev & next dev --turbopack",
-    "build": "next build && xmcp build",
+    "build": "next build",
     "start": "next start",
     "lint": "next lint",
     "db:generate": "drizzle-kit generate",
@@ -48,9 +48,5 @@
     "tsx": "^4.20.6",
     "typescript": "^5"
   },
-  "pnpm": {
-    "overrides": {
-      "xmcp>zod": "4.1.11"
-    }
-  }
+  "pnpm": {}
 }
