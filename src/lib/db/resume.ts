@@ -78,6 +78,66 @@ export async function createResume(data: NewResumePayload) {
   return resumeId;
 }
 
+export async function updateResume(id: string, data: NewResumePayload) {
+  await db.transaction(async (tx) => {
+    await tx
+      .update(schema.resumes)
+      .set({
+        title: data.title,
+        name: data.name,
+        email: data.email,
+        github: data.github,
+        description: data.description,
+        updatedAt: new Date(),
+      })
+      .where(eq(schema.resumes.id, id));
+
+    // Replace related collections with the new payload values
+    await tx.delete(schema.workHistory).where(eq(schema.workHistory.resumeId, id));
+    await tx.delete(schema.projects).where(eq(schema.projects.resumeId, id));
+    await tx.delete(schema.achievements).where(eq(schema.achievements.resumeId, id));
+
+    if (data.workHistory.length > 0) {
+      const inserts = data.workHistory.map((entry) =>
+        tx.insert(schema.workHistory).values({
+          resumeId: id,
+          companyName: entry.companyName,
+          role: entry.role,
+          dateOfWork: entry.dateOfWork,
+          description: entry.description,
+        })
+      );
+      await Promise.all(inserts);
+    }
+
+    if (data.projects.length > 0) {
+      const inserts = data.projects.map((entry) =>
+        tx.insert(schema.projects).values({
+          resumeId: id,
+          projectName: entry.projectName,
+          projectUrl: entry.projectUrl,
+          projectDescription: entry.projectDescription,
+        })
+      );
+      await Promise.all(inserts);
+    }
+
+    if (data.achievements.length > 0) {
+      const inserts = data.achievements.map((entry) =>
+        tx.insert(schema.achievements).values({
+          resumeId: id,
+          achievementName: entry.achievementName,
+          achievementUrl: entry.achievementUrl,
+          achievementDescription: entry.achievementDescription,
+        })
+      );
+      await Promise.all(inserts);
+    }
+  });
+
+  return id;
+}
+
 export async function getResume(id: string) {
   const [resume] = await db.select().from(schema.resumes).where(eq(schema.resumes.id, id));
   if (!resume) return null;
@@ -117,4 +177,13 @@ export async function listResumes(userId: string, limit = 20) {
     .orderBy(schema.resumes.createdAt)
     .limit(limit);
   return rows;
+}
+
+export async function deleteResume(id: string) {
+  await db.transaction(async (tx) => {
+    await tx.delete(schema.workHistory).where(eq(schema.workHistory.resumeId, id));
+    await tx.delete(schema.projects).where(eq(schema.projects.resumeId, id));
+    await tx.delete(schema.achievements).where(eq(schema.achievements.resumeId, id));
+    await tx.delete(schema.resumes).where(eq(schema.resumes.id, id));
+  });
 }
