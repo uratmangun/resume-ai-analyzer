@@ -42,3 +42,12 @@ export const achievements = pgTable('achievements', {
   achievementDescription: text('achievement_description').notNull(),
   createdAt: timestamp('created_at').defaultNow(),
 });
+
+export const apiKeys = pgTable('api_keys', {
+  id: uuid('id').primaryKey().defaultRandom(),
+  userId: text('user_id').notNull(),
+  name: text('name').notNull(),
+  key: text('key').notNull().unique(),
+  lastUsed: timestamp('last_used'),
+  createdAt: timestamp('created_at').defaultNow(),
+});

@@ -1,10 +1,12 @@
 
 export const tools = {
-"src/tools/greet.ts": () => import("../src/tools/greet.ts"),
+"src/tools/list-resumes.ts": () => import("../src/tools/list-resumes.ts"),
+"src/tools/get-resume.ts": () => import("../src/tools/get-resume.ts"),
+"src/tools/delete-resume.ts": () => import("../src/tools/delete-resume.ts"),
 };
 
 export const prompts = {
-"src/prompts/review-code.ts": () => import("../src/prompts/review-code.ts"),
+
 };
 
 export const resources = {
