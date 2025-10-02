@@ -434,6 +434,13 @@ function HomeContent() {
                 >
                   My Resumes
                 </Link>
+                <span className="text-slate-300">|</span>
+                <Link
+                  href="/api-keys"
+                  className="text-sm font-medium text-sky-600 hover:text-sky-700"
+                >
+                  API Keys
+                </Link>
               </div>
             </SignedIn>
           </div>
