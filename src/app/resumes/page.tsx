@@ -35,6 +35,60 @@ export default function ResumesPage() {
     fetchResumes();
   }, []);
 
+  const handleDelete = async (id: string, title: string) => {
+    if (!confirm(`Are you sure you want to delete "${title}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      const res = await fetch(`/api/resumes/${id}`, {
+        method: 'DELETE',
+      });
+
+      if (res.ok) {
+        setResumes((prev) => prev.filter((r) => r.id !== id));
+      } else {
+        alert('Failed to delete resume. Please try again.');
+      }
+    } catch (error) {
+      console.error('Failed to delete resume:', error);
+      alert('Failed to delete resume. Please try again.');
+    }
+  };
+
+  const handleUseTemplate = async (id: string, title: string) => {
+    try {
+      // Fetch the original resume
+      const res = await fetch(`/api/resumes/${id}`);
+      if (!res.ok) {
+        alert('Failed to load template. Please try again.');
+        return;
+      }
+
+      const template = await res.json();
+
+      // Store template data in localStorage temporarily
+      const templateData = {
+        title: `${title} (Copy)`,
+        name: template.name || '',
+        email: template.email || '',
+        github: template.github || '',
+        description: template.description || '',
+        workHistory: template.workHistory || [],
+        projects: template.projects || [],
+        achievements: template.achievements || [],
+      };
+
+      localStorage.setItem('resumeTemplate', JSON.stringify(templateData));
+      
+      // Redirect to home page
+      window.location.href = '/';
+    } catch (error) {
+      console.error('Failed to use template:', error);
+      alert('Failed to load template. Please try again.');
+    }
+  };
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-slate-800 p-8">
       <div className="max-w-6xl mx-auto">
@@ -91,10 +145,9 @@ export default function ResumesPage() {
           ) : (
             <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
               {resumes.map((resume) => (
-                <Link
+                <div
                   key={resume.id}
-                  href={`/?id=${resume.id}`}
-                  className="block bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg p-6 transition hover:shadow-xl hover:border-sky-400"
+                  className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg p-6 transition hover:shadow-xl"
                 >
                   <h3 className="text-xl font-semibold text-slate-900 dark:text-slate-50 mb-2">
                     {resume.title}
@@ -103,15 +156,42 @@ export default function ResumesPage() {
                     <p className="truncate">{resume.name}</p>
                     <p className="truncate">{resume.email}</p>
                   </div>
-                  <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400">
-                    <span>
-                      Created: {new Date(resume.createdAt).toLocaleDateString()}
-                    </span>
-                    <span className="text-sky-600 dark:text-sky-400 font-medium">
-                      Edit →
-                    </span>
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between text-xs">
+                      <span className="text-slate-500 dark:text-slate-400">
+                        Created: {new Date(resume.createdAt).toLocaleDateString()}
+                      </span>
+                      <div className="flex items-center gap-3">
+                        <Link
+                          href={`/resumes/${resume.id}/edit`}
+                          className="text-sky-600 dark:text-sky-400 font-medium hover:text-sky-700 dark:hover:text-sky-500 transition"
+                        >
+                          Edit →
+                        </Link>
+                        <button
+                          onClick={() => handleDelete(resume.id, resume.title)}
+                          className="text-red-600 dark:text-red-400 font-medium hover:text-red-700 dark:hover:text-red-500 transition"
+                        >
+                          Delete
+                        </button>
+                      </div>
+                    </div>
+                    <div className="grid grid-cols-2 gap-2">
+                      <button
+                        onClick={() => window.open(`/resumes/${resume.id}/print`, '_blank')}
+                        className="rounded-md bg-slate-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-slate-700 transition"
+                      >
+                        Print
+                      </button>
+                      <button
+                        onClick={() => handleUseTemplate(resume.id, resume.title)}
+                        className="rounded-md bg-emerald-600 px-3 py-1.5 text-xs font-medium text-white hover:bg-emerald-700 transition"
+                      >
+                        Use as Template
+                      </button>
+                    </div>
                   </div>
-                </Link>
+                </div>
               ))}
             </div>
           )}

@@ -3,7 +3,7 @@
 import { useEffect, useState, ChangeEvent, FormEvent, Suspense } from 'react';
 import { sdk } from '@farcaster/miniapp-sdk'
 import { SignedIn, SignedOut, SignInButton, UserButton } from '@clerk/nextjs';
-import { useRouter, useSearchParams } from 'next/navigation';
+import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useChat } from '@ai-sdk/react';
 import { DefaultChatTransport } from 'ai';
@@ -30,8 +30,7 @@ type AchievementEntry = {
 
 function HomeContent() {
   const router = useRouter();
-  const searchParams = useSearchParams();
-  const resumeId = searchParams.get('id');
+  
 
   const [formData, setFormData] = useState({
     title: '',
@@ -44,7 +43,7 @@ function HomeContent() {
     achievements: [{ achievementName: '', achievementUrl: '', achievementDescription: '' }] as AchievementEntry[]
   });
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
-  const [isEditing, setIsEditing] = useState(false);
+  
 
   // AI modal state for description editing mock
   const [isAIModalOpen, setIsAIModalOpen] = useState(false);
@@ -111,35 +110,21 @@ function HomeContent() {
       await sdk.actions.ready();
     };
     initializeSdk();
+
+    // Check for template data in localStorage
+    const templateData = localStorage.getItem('resumeTemplate');
+    if (templateData) {
+      try {
+        const data = JSON.parse(templateData);
+        setFormData(data);
+        localStorage.removeItem('resumeTemplate'); // Clear after loading
+      } catch (error) {
+        console.error('Failed to load template data:', error);
+      }
+    }
   }, []);
 
-  useEffect(() => {
-    if (resumeId) {
-      // Load existing resume for editing
-      async function loadResume() {
-        try {
-          const res = await fetch(`/api/resumes/${resumeId}`);
-          if (res.ok) {
-            const data = await res.json();
-            setFormData({
-              title: data.title || '',
-              name: data.name || '',
-              description: data.description || '',
-              email: data.email || '',
-              github: data.github || '',
-              workHistory: data.workHistory?.length > 0 ? data.workHistory : [{ companyName: '', role: '', dateOfWork: '', description: '' }],
-              projects: data.projects?.length > 0 ? data.projects : [{ projectName: '', projectUrl: '', projectDescription: '' }],
-              achievements: data.achievements?.length > 0 ? data.achievements : [{ achievementName: '', achievementUrl: '', achievementDescription: '' }]
-            });
-            setIsEditing(true);
-          }
-        } catch (error) {
-          console.error('Failed to load resume:', error);
-        }
-      }
-      loadResume();
-    }
-  }, [resumeId]);
+  
 
   type ScalarField = 'title' | 'name' | 'description' | 'email' | 'github';
   type WorkField = 'companyName' | 'role' | 'dateOfWork' | 'description';
@@ -437,7 +422,7 @@ function HomeContent() {
               <div className="flex items-center justify-center gap-3">
                 <Link
                   href="/"
-                  onClick={() => { setFormData({ title: '', name: '', description: '', email: '', github: '', workHistory: [{ companyName: '', role: '', dateOfWork: '', description: '' }], projects: [{ projectName: '', projectUrl: '', projectDescription: '' }], achievements: [{ achievementName: '', achievementUrl: '', achievementDescription: '' }] }); setIsEditing(false); }}
+                  onClick={() => { setFormData({ title: '', name: '', description: '', email: '', github: '', workHistory: [{ companyName: '', role: '', dateOfWork: '', description: '' }], projects: [{ projectName: '', projectUrl: '', projectDescription: '' }], achievements: [{ achievementName: '', achievementUrl: '', achievementDescription: '' }] }); }}
                   className="text-sm font-medium text-sky-600 hover:text-sky-700"
                 >
                   + New Resume
@@ -481,7 +466,7 @@ function HomeContent() {
         <SignedIn>
           <section className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg p-8">
             <h2 className="text-2xl font-semibold text-slate-800 dark:text-slate-100 mb-6">
-              {isEditing ? 'Edit Resume' : 'Build your resume snapshot'}
+              Build your resume snapshot
             </h2>
             <form className="space-y-6" onSubmit={handleSubmit}>
             <div className="flex flex-col">
