@@ -25,7 +25,7 @@ const getFarcasterConfig = () => {
     // Fallback config if file read fails
     return {
       miniapp: {
-        name: 'Resume AI Analyzer',
+        name: 'Resume AI Creator',
         buttonTitle: 'Launch App',
         homeUrl: process.env.NEXT_PUBLIC_APP_DOMAIN || 'https://example.com',
         imageUrl: process.env.NEXT_PUBLIC_APP_DOMAIN 
@@ -44,8 +44,8 @@ const farcasterConfig = getFarcasterConfig();
 
 export const metadata: Metadata = {
   title: {
-    default: 'Resume AI Analyzer',
-    template: '%s | Resume AI Analyzer',
+    default: 'Resume AI Creator',
+    template: '%s | Resume AI Creator',
   },
   description: 'A Farcaster mini app built with Next.js and deployed on Cloudflare Pages',
   keywords: ['Farcaster', 'Mini App', 'Web3', 'Social', 'Decentralized'],
@@ -59,16 +59,16 @@ export const metadata: Metadata = {
   },
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'),
   openGraph: {
-    title: 'Resume AI Analyzer',
+    title: 'Resume AI Creator',
     description: 'A Farcaster mini app built with Next.js',
     url: '/',
-    siteName: 'Resume AI Analyzer',
+    siteName: 'Resume AI Creator',
     locale: 'en_US',
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Resume AI Analyzer',
+    title: 'Resume AI Creator',
     description: 'A Farcaster mini app built with Next.js',
   },
   robots: {

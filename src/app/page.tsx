@@ -43,6 +43,7 @@ function HomeContent() {
     achievements: [{ achievementName: '', achievementUrl: '', achievementDescription: '' }] as AchievementEntry[]
   });
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
+  const [apiKeys, setApiKeys] = useState<Array<{ id: string; key: string; name: string }>>([]);
   
 
   // AI modal state for description editing mock
@@ -123,6 +124,38 @@ function HomeContent() {
       }
     }
   }, []);
+
+  // Fetch API keys
+  useEffect(() => {
+    const fetchApiKeys = async () => {
+      try {
+        const response = await fetch('/api/api-keys');
+        if (response.ok) {
+          const data = await response.json();
+          setApiKeys(Array.isArray(data) ? data : []);
+        }
+      } catch (error) {
+        console.error('Failed to fetch API keys:', error);
+      }
+    };
+    fetchApiKeys();
+  }, []);
+
+  const copyMcpUrl = () => {
+    const firstApiKey = apiKeys[0]?.key;
+    if (!firstApiKey) {
+      toast.error('No API Key', {
+        description: 'Please create an API key first.',
+      });
+      return;
+    }
+    const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
+    const mcpUrl = `${baseUrl}/mcp?api-key=${firstApiKey}`;
+    navigator.clipboard.writeText(mcpUrl);
+    toast.success('Copied!', {
+      description: 'MCP URL copied to clipboard.',
+    });
+  };
 
   
 
@@ -413,10 +446,10 @@ function HomeContent() {
         <header className="flex items-center justify-between mb-12">
           <div className="text-center flex-1">
             <h1 className="text-4xl font-bold text-slate-800 dark:text-slate-100 mb-1">
-              Resume AI Analyzer
+              Resume AI Creator
             </h1>
             <p className="text-lg text-slate-600 dark:text-slate-300 mb-3">
-              analyze how your resume need to be changed using ai
+              create your resume using ai and mcp
             </p>
             <SignedIn>
               <div className="flex items-center justify-center gap-3">
@@ -458,8 +491,59 @@ function HomeContent() {
           </div>
         </header>
 
+        {/* MCP Connection Section - Always visible */}
+        <section className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg p-8 mb-6">
+          <h2 className="text-2xl font-semibold text-slate-800 dark:text-slate-100 mb-4">
+            Connect to MCP
+          </h2>
+          <p className="text-slate-600 dark:text-slate-300 mb-4">
+            Use this URL to connect your AI assistant via Model Context Protocol:
+          </p>
+          <div className="flex gap-2">
+            <input
+              type="text"
+              readOnly
+              value={typeof window !== 'undefined' ? `${window.location.origin}/mcp?api-key=${apiKeys.length > 0 ? apiKeys[0].key : '<get the api key after login>'}` : ''}
+              className="flex-1 rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 px-4 py-2 text-slate-800 dark:text-slate-100 font-mono text-sm"
+            />
+            <SignedIn>
+              {apiKeys.length > 0 && (
+                <button
+                  type="button"
+                  onClick={copyMcpUrl}
+                  className="inline-flex items-center justify-center rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-400"
+                  title="Copy to clipboard"
+                >
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                  </svg>
+                </button>
+              )}
+            </SignedIn>
+          </div>
+          <SignedIn>
+            {apiKeys.length === 0 && (
+              <div className="mt-3 text-sm text-slate-600 dark:text-slate-300">
+                No API key found.{' '}
+                <Link href="/api-keys" className="text-sky-600 dark:text-sky-400 hover:underline">
+                  Create one here
+                </Link>
+                .
+              </div>
+            )}
+          </SignedIn>
+          <SignedOut>
+            <div className="mt-3 text-sm text-slate-600 dark:text-slate-300">
+              <Link href="/sign-in" className="text-sky-600 dark:text-sky-400 hover:underline">
+                Sign in
+              </Link>
+              {' '}to get your API key.
+            </div>
+          </SignedOut>
+        </section>
+
         <SignedOut>
-          <section className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg p-8 text-center">
+          <section className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg p-8 text-center mb-6">
             <h2 className="text-2xl font-semibold text-slate-800 dark:text-slate-100 mb-3">Sign in required</h2>
             <p className="text-slate-600 dark:text-slate-300 mb-6">Please sign in to create and save your resume snapshots.</p>
             <SignInButton mode="modal">
@@ -1105,7 +1189,7 @@ export default function Home() {
       <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 dark:from-slate-900 dark:to-slate-800 p-8">
         <div className="max-w-4xl mx-auto">
           <div className="text-center">
-            <h1 className="text-4xl font-bold text-slate-800 dark:text-slate-100 mb-1">Resume AI Analyzer</h1>
+            <h1 className="text-4xl font-bold text-slate-800 dark:text-slate-100 mb-1">Resume AI Creator</h1>
             <p className="text-lg text-slate-600 dark:text-slate-300">Loading...</p>
           </div>
         </div>
