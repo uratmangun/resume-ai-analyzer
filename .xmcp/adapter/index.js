@@ -9,6 +9,17 @@
 /******/ (() => { // webpackBootstrap
 /******/ 	var __webpack_modules__ = ({
 
+/***/ "../src/tools/create-resume.ts":
+/*!***************************************************!*\
+  !*** external "../../src/tools/create-resume.ts" ***!
+  \***************************************************/
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("../../src/tools/create-resume.ts");
+
+/***/ }),
+
 /***/ "../src/tools/delete-resume.ts":
 /*!***************************************************!*\
   !*** external "../../src/tools/delete-resume.ts" ***!
@@ -42,6 +53,17 @@ module.exports = require("../../src/tools/list-resumes.ts");
 
 /***/ }),
 
+/***/ "../src/tools/update-resume.ts":
+/*!***************************************************!*\
+  !*** external "../../src/tools/update-resume.ts" ***!
+  \***************************************************/
+/***/ ((module) => {
+
+"use strict";
+module.exports = require("../../src/tools/update-resume.ts");
+
+/***/ }),
+
 /***/ "./.xmcp/adapter-nextjs.js":
 /*!*********************************!*\
   !*** ./.xmcp/adapter-nextjs.js ***!
@@ -59,7 +81,7 @@ eval("{/* provided dependency */ var INJECTED_TOOLS = __webpack_require__(/*! ./
 /***/ ((__unused_webpack_module, __webpack_exports__, __webpack_require__) => {
 
 "use strict";
-eval("{__webpack_require__.r(__webpack_exports__);\n/* harmony export */ __webpack_require__.d(__webpack_exports__, {\n/* harmony export */   prompts: () => (/* binding */ prompts),\n/* harmony export */   resources: () => (/* binding */ resources),\n/* harmony export */   tools: () => (/* binding */ tools)\n/* harmony export */ });\n\nconst tools = {\n\"src/tools/list-resumes.ts\": () => Promise.resolve(/*! import() */).then(__webpack_require__.t.bind(__webpack_require__, /*! ../src/tools/list-resumes.ts */ \"../src/tools/list-resumes.ts\", 23)),\n\"src/tools/get-resume.ts\": () => Promise.resolve(/*! import() */).then(__webpack_require__.t.bind(__webpack_require__, /*! ../src/tools/get-resume.ts */ \"../src/tools/get-resume.ts\", 23)),\n\"src/tools/delete-resume.ts\": () => Promise.resolve(/*! import() */).then(__webpack_require__.t.bind(__webpack_require__, /*! ../src/tools/delete-resume.ts */ \"../src/tools/delete-resume.ts\", 23)),\n};\n\nconst prompts = {\n\n};\n\nconst resources = {\n\n};\n\n\n//# sourceURL=[module]\n//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiLi8ueG1jcC9pbXBvcnQtbWFwLmpzIiwibWFwcGluZ3MiOiI7Ozs7OztBQUFBO0FBQ0E7QUFDQTtBQUNBO0FBQ0E7QUFDQTtBQUNBO0FBQ0E7QUFDQTtBQUNBO0FBQ0E7QUFDQTtBQUNBO0FBQ0E7QUFDQTtBQUNBIiwic291cmNlcyI6WyJ3ZWJwYWNrOi8vTmV4dC5qcyB3aXRoIEFkYXB0ZXIvLi8ueG1jcC9pbXBvcnQtbWFwLmpzPzY2MTIiXSwic291cmNlc0NvbnRlbnQiOlsiXG5leHBvcnQgY29uc3QgdG9vbHMgPSB7XG5cInNyYy90b29scy9saXN0LXJlc3VtZXMudHNcIjogKCkgPT4gaW1wb3J0KFwiLi4vc3JjL3Rvb2xzL2xpc3QtcmVzdW1lcy50c1wiKSxcblwic3JjL3Rvb2xzL2dldC1yZXN1bWUudHNcIjogKCkgPT4gaW1wb3J0KFwiLi4vc3JjL3Rvb2xzL2dldC1yZXN1bWUudHNcIiksXG5cInNyYy90b29scy9kZWxldGUtcmVzdW1lLnRzXCI6ICgpID0+IGltcG9ydChcIi4uL3NyYy90b29scy9kZWxldGUtcmVzdW1lLnRzXCIpLFxufTtcblxuZXhwb3J0IGNvbnN0IHByb21wdHMgPSB7XG5cbn07XG5cbmV4cG9ydCBjb25zdCByZXNvdXJjZXMgPSB7XG5cbn07XG5cblxuIl0sIm5hbWVzIjpbXSwic291cmNlUm9vdCI6IiJ9\n//# sourceURL=webpack-internal:///./.xmcp/import-map.js\n\n}");
+eval("{__webpack_require__.r(__webpack_exports__);\n/* harmony export */ __webpack_require__.d(__webpack_exports__, {\n/* harmony export */   prompts: () => (/* binding */ prompts),\n/* harmony export */   resources: () => (/* binding */ resources),\n/* harmony export */   tools: () => (/* binding */ tools)\n/* harmony export */ });\n\nconst tools = {\n\"src/tools/delete-resume.ts\": () => Promise.resolve(/*! import() */).then(__webpack_require__.t.bind(__webpack_require__, /*! ../src/tools/delete-resume.ts */ \"../src/tools/delete-resume.ts\", 23)),\n\"src/tools/get-resume.ts\": () => Promise.resolve(/*! import() */).then(__webpack_require__.t.bind(__webpack_require__, /*! ../src/tools/get-resume.ts */ \"../src/tools/get-resume.ts\", 23)),\n\"src/tools/list-resumes.ts\": () => Promise.resolve(/*! import() */).then(__webpack_require__.t.bind(__webpack_require__, /*! ../src/tools/list-resumes.ts */ \"../src/tools/list-resumes.ts\", 23)),\n\"src/tools/create-resume.ts\": () => Promise.resolve(/*! import() */).then(__webpack_require__.t.bind(__webpack_require__, /*! ../src/tools/create-resume.ts */ \"../src/tools/create-resume.ts\", 23)),\n\"src/tools/update-resume.ts\": () => Promise.resolve(/*! import() */).then(__webpack_require__.t.bind(__webpack_require__, /*! ../src/tools/update-resume.ts */ \"../src/tools/update-resume.ts\", 23)),\n};\n\nconst prompts = {\n\n};\n\nconst resources = {\n\n};\n\n\n//# sourceURL=[module]\n//# sourceMappingURL=data:application/json;charset=utf-8;base64,eyJ2ZXJzaW9uIjozLCJmaWxlIjoiLi8ueG1jcC9pbXBvcnQtbWFwLmpzIiwibWFwcGluZ3MiOiI7Ozs7OztBQUFBO0FBQ0E7QUFDQTtBQUNBO0FBQ0E7QUFDQTtBQUNBO0FBQ0E7QUFDQTtBQUNBO0FBQ0E7QUFDQTtBQUNBO0FBQ0E7QUFDQTtBQUNBO0FBQ0E7QUFDQSIsInNvdXJjZXMiOlsid2VicGFjazovL05leHQuanMgd2l0aCBBZGFwdGVyLy4vLnhtY3AvaW1wb3J0LW1hcC5qcz82NjEyIl0sInNvdXJjZXNDb250ZW50IjpbIlxuZXhwb3J0IGNvbnN0IHRvb2xzID0ge1xuXCJzcmMvdG9vbHMvZGVsZXRlLXJlc3VtZS50c1wiOiAoKSA9PiBpbXBvcnQoXCIuLi9zcmMvdG9vbHMvZGVsZXRlLXJlc3VtZS50c1wiKSxcblwic3JjL3Rvb2xzL2dldC1yZXN1bWUudHNcIjogKCkgPT4gaW1wb3J0KFwiLi4vc3JjL3Rvb2xzL2dldC1yZXN1bWUudHNcIiksXG5cInNyYy90b29scy9saXN0LXJlc3VtZXMudHNcIjogKCkgPT4gaW1wb3J0KFwiLi4vc3JjL3Rvb2xzL2xpc3QtcmVzdW1lcy50c1wiKSxcblwic3JjL3Rvb2xzL2NyZWF0ZS1yZXN1bWUudHNcIjogKCkgPT4gaW1wb3J0KFwiLi4vc3JjL3Rvb2xzL2NyZWF0ZS1yZXN1bWUudHNcIiksXG5cInNyYy90b29scy91cGRhdGUtcmVzdW1lLnRzXCI6ICgpID0+IGltcG9ydChcIi4uL3NyYy90b29scy91cGRhdGUtcmVzdW1lLnRzXCIpLFxufTtcblxuZXhwb3J0IGNvbnN0IHByb21wdHMgPSB7XG5cbn07XG5cbmV4cG9ydCBjb25zdCByZXNvdXJjZXMgPSB7XG5cbn07XG5cblxuIl0sIm5hbWVzIjpbXSwic291cmNlUm9vdCI6IiJ9\n//# sourceURL=webpack-internal:///./.xmcp/import-map.js\n\n}");
 
 /***/ }),
 
