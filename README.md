@@ -1,4 +1,4 @@
-# Resume AI Analyzer
+# Resume AI Creator
 
 A powerful Farcaster mini app built with Next.js that allows users to create, analyze, and optimize their resumes using AI. The application provides intelligent insights and suggestions to improve resume effectiveness and job matching.
 
