@@ -151,17 +151,20 @@ export async function getResume(id: string) {
   return {
     ...resume,
     workHistory: work.map((w) => ({
+      id: w.id,
       companyName: w.companyName,
       role: w.role,
       dateOfWork: w.dateOfWork,
       description: w.description,
     })),
     projects: proj.map((p) => ({
+      id: p.id,
       projectName: p.projectName,
       projectUrl: p.projectUrl,
       projectDescription: p.projectDescription,
     })),
     achievements: ach.map((a) => ({
+      id: a.id,
       achievementName: a.achievementName,
       achievementUrl: a.achievementUrl,
       achievementDescription: a.achievementDescription,
