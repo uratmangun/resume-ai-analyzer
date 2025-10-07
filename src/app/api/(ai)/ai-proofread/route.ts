@@ -1,5 +1,9 @@
 import { streamText, convertToModelMessages, type UIMessage } from 'ai';
+import { createOpenRouter } from '@openrouter/ai-sdk-provider';
 
+const openrouter = createOpenRouter({
+  apiKey: process.env.OPENROUTER_API_KEY,
+});
 export const maxDuration = 30;
 
 export async function POST(req: Request) {
@@ -12,7 +16,7 @@ Maintain original formatting, bullet points, and line breaks. Do not add content
 Return ONLY the corrected text without explanations, notes, or quotes.`;
 
     const result = streamText({
-      model: 'meituan/longcat-flash-chat',
+      model: openrouter.chat('openai/gpt-5-nano'),
       system: systemMessage,
       messages: convertToModelMessages(messages),
     });
