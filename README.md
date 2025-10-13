@@ -1,236 +1,141 @@
 # Resume AI Creator
 
-A powerful Farcaster mini app built with Next.js that allows users to create, analyze, and optimize their resumes using AI. The application provides intelligent insights and suggestions to improve resume effectiveness and job matching.
+Empower users to craft polished resumes through an AI-assisted Next.js application that integrates proofreading, translation, and template management features. The project ships with a Farcaster mini app experience, secure Clerk authentication, and programmable APIs for external tooling.
+
+## Table of Contents
+
+- [Features](#features)
+- [Tech Stack](#tech-stack)
+- [Getting Started](#getting-started)
+- [Environment Setup](#environment-setup)
+- [Project Structure](#project-structure)
+- [Usage](#usage)
+- [Database & Drizzle ORM](#database--drizzle-orm)
+- [MCP & Programmatic Access](#mcp--programmatic-access)
+- [Contributing](#contributing)
+- [License](#license)
 
 ## Features
 
-- **AI-Powered Resume Analysis**: Leverage multiple AI providers (OpenAI, Google Gemini, Together AI) for comprehensive resume evaluation
-- **Structured Resume Builder**: Create resumes with organized sections for work history, projects, and achievements
-- **Farcaster Integration**: Native support for Farcaster miniapp ecosystem
-- **Authentication**: Secure user authentication via Clerk
-- **Real-time Collaboration**: Share and collaborate on resume improvements
-- **Blockchain Integration**: Support for Base chain and CDP wallet integration
+- **AI-assisted resume builder**: Capture work history, projects, and achievements with real-time validation on `src/app/page.tsx`.
+- **Proofreading & translation**: Streamlined AI endpoints in `src/app/api/(ai)/` provide grammar corrections and multilingual support via OpenRouter models.
+- **Resume templates & management**: Persisted resumes, cloning, and printing flows under `src/app/resumes/` backed by Drizzle ORM.
+- **Secure authentication**: Clerk-powered sign-in flows, protecting pages like `src/app/api-keys/page.tsx` and API routes.
+- **API key console**: Generate and manage personal API keys for integrations through `src/app/api/api-keys/`.
+- **Farcaster mini app readiness**: Metadata and manifest support in `src/app/layout.tsx` plus public assets for Farcaster clients.
+- **XMCP integration**: Adapter configuration in `xmcp.config.ts` enabling conversational AI tooling within the Next.js runtime.
 
 ## Tech Stack
 
-- **Frontend**: Next.js 15, React 19, TypeScript, Tailwind CSS
-- **Backend**: Next.js API Routes, PostgreSQL
-- **Database**: Drizzle ORM with PostgreSQL
-- **Authentication**: Clerk
-- **AI Services**: OpenAI, Google Gemini, Together AI, OpenRouter
-- **Blockchain**: Base Chain, CDP (Coinbase Developer Platform)
-- **Deployment**: Vercel (recommended)
+- **Framework**: Next.js 15 with the App Router and React 19
+- **Language**: TypeScript with strict configuration (`tsconfig.json`)
+- **Styling**: Tailwind CSS v4 via the new `@import "tailwindcss"` pipeline in `src/app/globals.css`
+- **Auth**: Clerk Next.js SDK
+- **Database**: Postgres with Drizzle ORM and migrations under `drizzle/`
+- **AI Tooling**: `@ai-sdk/react`, OpenRouter models, XMCP adapter
+- **Utilities**: Sonner for notifications, Ethers for blockchain utilities, Farcaster Mini App SDK
 
-## Prerequisites
+## Getting Started
 
-- Node.js 18+
-- PostgreSQL database
-- Clerk account for authentication
-- AI service API keys (OpenAI, Google Gemini, etc.)
-- Farcaster account for miniapp features
+### Prerequisites
 
-## Installation
+- Node.js 18 or later
+- Bun package manager (preferred)
+- Postgres database instance for persistence
 
-1. **Clone the repository**
+### Installation
+
+```bash
+bun install
+```
+
+If Bun is unavailable, fall back to `pnpm install`.
+
+## Environment Setup
+
+1. Copy the sample environment file and fill in secrets:
    ```bash
-   git clone <repository-url>
-   cd resume-ai-analyzer
+   cp .env.example .env
    ```
+2. Populate credentials for services you plan to use:
+   - **Clerk**: `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY`, `CLERK_SECRET_KEY`
+   - **Database**: `POSTGRES_URL`
+   - **AI Providers**: `OPENROUTER_API_KEY`, `GEMINI_API_KEY`, `OPENAI_API_KEY`, etc.
+   - **Farcaster & Cloudflare**: `CLOUDFLARE_*`, `FARCASTER_*`, `NEYNAR_API_KEY`
+   - **XMCP & Coinbase**: `CDP_*`, `AI_GATEWAY_API_KEY`
+   - Optional public URLs such as `NEXT_PUBLIC_APP_DOMAIN`
 
-2. **Install dependencies**
-   ```bash
-   pnpm install
-   ```
-
-3. **Set up environment variables**
-
-   Copy `.env.example` to `.env.local` and fill in your configuration:
-   ```bash
-   cp .env.example .env.local
-   ```
-
-   Required environment variables:
-   ```env
-   # Database
-   POSTGRES_URL=your_postgresql_connection_string
-
-   # Authentication (Clerk)
-   NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=your_clerk_publishable_key
-   CLERK_SECRET_KEY=your_clerk_secret_key
-
-   # AI Services (choose at least one)
-   OPENAI_API_KEY=your_openai_api_key
-   GEMINI_API_KEY=your_gemini_api_key
-   TOGETHER_API_KEY=your_together_api_key
-
-   # Farcaster Integration
-   FARCASTER_FID=your_farcaster_fid
-   NEYNAR_API_KEY=your_neynar_api_key
-
-   # Deployment
-   VERCEL_TOKEN=your_vercel_token
-   ```
-
-4. **Set up the database**
-   ```bash
-   # Generate and apply database migrations
-   pnpm db:generate
-   pnpm db:push
-   ```
-
-5. **Start the development server**
-   ```bash
-   pnpm dev
-   ```
-
-   Open [http://localhost:3000](http://localhost:3000) in your browser.
-
-## Usage
-
-### Creating a Resume
-
-1. **Sign In**: Use Clerk authentication to access the application
-2. **Fill Basic Information**: Enter your name, email, and professional summary
-3. **Add Work History**: Include your professional experience with company details, roles, and achievements
-4. **Add Projects**: Showcase your key projects with descriptions and links
-5. **Add Achievements**: Highlight certifications, awards, and other accomplishments
-6. **AI Analysis**: Get intelligent suggestions for improving your resume
-
-### AI Features
-
-The application supports multiple AI providers for resume analysis:
-
-- **Content Optimization**: Improve resume language and impact
-- **Keyword Analysis**: Identify relevant keywords for your target industry
-- **Format Suggestions**: Optimize layout and structure
-- **Industry Matching**: Get tailored suggestions based on target roles
+Environment variables are loaded via `dotenv` in scripts like `drizzle.config.ts`.
 
 ## Project Structure
 
-```
+```text
 src/
-├── app/                    # Next.js app directory
-│   ├── api/               # API routes
-│   │   └── resumes/       # Resume management endpoints
-│   ├── sign-in/           # Authentication pages
-│   ├── sign-up/           # Registration pages
-│   └── resumes/           # Resume management pages
-├── lib/                   # Utility libraries
-├── prompts/               # AI prompt templates
-└── tools/                 # AI service integrations
-
-drizzle/                   # Database migrations
-├── 0000_initial.sql       # Base schema
-├── 0001_add_user_id.sql   # User associations
-└── [additional migrations]
-
-public/                    # Static assets
-└── .well-known/           # Farcaster configuration
+├─ app/
+│  ├─ api/(ai)/           # AI proofread/translate and GitHub models endpoints
+│  ├─ api/api-keys/       # REST endpoints for API key CRUD
+│  ├─ api/resumes/        # CRUD endpoints for resumes
+│  ├─ api-keys/           # API key management dashboard (client component)
+│  ├─ resumes/            # Resume listing, editing, printing flows
+│  ├─ mcp/                # MCP adapter route
+│  ├─ layout.tsx          # Global metadata and Farcaster configuration
+│  └─ page.tsx            # Main resume builder interface
+├─ lib/
+│  ├─ api-key-validator.ts
+│  └─ db/                 # Drizzle schema and helpers
+├─ prompts/               # Reserved for prompt templates
+├─ tools/                 # Utility scripts usable by MCP agents
+scripts/                   # Automation for asset generation, database tasks
+public/                    # Static assets including Farcaster manifest
 ```
 
-## Database Schema
+## Usage
 
-The application uses a structured approach to resume data:
+- **Local development**: After installing dependencies and configuring `.env`, run the dev server manually:
+  ```bash
+  bun run dev
+  ```
+  The script runs both `xmcp dev` and `next dev --turbopack`.
+- **Building for production**:
+  ```bash
+  bun run build
+  ```
+- **Linting**:
+  ```bash
+  bun run lint
+  ```
 
-- **resumes**: Main resume records with user associations
-- **work_history**: Professional experience entries
-- **projects**: Project showcase entries
-- **achievements**: Awards and certifications
+Pages guarded by Clerk will require valid authentication; configure Clerk keys and domain settings before testing.
 
-## Configuration
+## Database & Drizzle ORM
 
-### Farcaster Miniapp Setup
+- Update the schema in `src/lib/db/schema.ts` as needed.
+- Generate migration SQL files:
+  ```bash
+  bun run db:generate
+  ```
+- Apply migrations to the configured Postgres database:
+  ```bash
+  bun run db:push
+  ```
+- For manual SQL review or rollback workflows, inspect the SQL files under `drizzle/`.
 
-1. Configure your Farcaster app in `public/.well-known/farcaster.json`
-2. Set up the required environment variables for Farcaster integration
-3. Deploy to a domain accessible by Farcaster
+Ensure `POSTGRES_URL` is set before running database commands.
 
-### AI Provider Configuration
+## MCP & Programmatic Access
 
-Configure your preferred AI providers in the environment variables. The application supports:
-
-- OpenAI GPT models
-- Google Gemini
-- Together AI
-- OpenRouter (unified API)
-
-## Development
-
-### Database Management
-
-```bash
-# Generate new migrations
-pnpm db:generate
-
-# Apply migrations
-pnpm db:push
-
-# Open Drizzle Studio (GUI for database)
-pnpm db:studio
-```
-
-### Code Quality
-
-```bash
-# Lint the codebase
-pnpm lint
-
-# Build for production
-pnpm build
-```
-
-## Deployment
-
-### Vercel (Recommended)
-
-1. Connect your repository to Vercel
-2. Add environment variables in Vercel dashboard
-3. Deploy automatically on push to main branch
-
-### Manual Deployment
-
-```bash
-# Build the application
-pnpm build
-
-# Start production server
-pnpm start
-```
+- MCP (Model Context Protocol) adapter is enabled via `xmcp.config.ts` and the `/mcp` route.
+- Resume creation and management APIs under `src/app/api/resumes/` expose JSON endpoints usable by automation clients.
+- Personal API keys can be generated through the dashboard and are stored in the `api_keys` table defined in the Drizzle schema.
 
 ## Contributing
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/amazing-feature`)
-3. Make your changes
-4. Run tests and linting (`pnpm lint`)
-5. Commit your changes (`git commit -m 'Add amazing feature'`)
-6. Push to the branch (`git push origin feature/amazing-feature`)
-7. Open a Pull Request
-
-## Environment Variables Reference
-
-| Variable | Description | Required |
-|----------|-------------|----------|
-| `POSTGRES_URL` | PostgreSQL database connection | Yes |
-| `NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY` | Clerk authentication | Yes |
-| `CLERK_SECRET_KEY` | Clerk server-side secret | Yes |
-| `OPENAI_API_KEY` | OpenAI API access | No* |
-| `GEMINI_API_KEY` | Google Gemini API access | No* |
-| `FARCASTER_FID` | Your Farcaster ID | No* |
-| `NEYNAR_API_KEY` | Neynar API for Farcaster | No* |
-
-* At least one AI provider required for resume analysis features
+1. Fork and clone the repository.
+2. Create a feature branch from `main`.
+3. Ensure formatting and lint checks pass (`bun run lint`).
+4. Add or update tests where relevant.
+5. Submit a pull request with a clear summary of changes.
 
 ## License
 
-This project is licensed under the MIT License - see the LICENSE file for details.
-
-## Support
-
-For support and questions:
-- Create an issue in the repository
-- Contact the development team
-
----
-
-Built with ❤️ using Next.js, AI, and the Farcaster ecosystem.
+No explicit license file is provided. All rights reserved unless otherwise noted.

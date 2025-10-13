@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { type InferSchema, type ToolMetadata } from "xmcp";
-import { requireApiKey } from "../lib/api-key-validator";
 import { getResume, updateResume } from "../lib/db/resume";
 
 // Define schemas for nested objects
@@ -49,7 +48,18 @@ export const metadata: ToolMetadata = {
 };
 
 // Tool implementation with API key validation
-export default requireApiKey(async (params: InferSchema<typeof schema>, validation) => {
+export default async (params: InferSchema<typeof schema>, extra?: any) => {
+  const userId: string | undefined = extra?.extra?.userId;
+  if (!userId) {
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify({ error: "Unauthorized: Missing user identity" }, null, 2),
+        },
+      ],
+    };
+  }
   try {
     // First, check if the resume exists
     const existingResume = await getResume(params.resumeId);
@@ -67,7 +77,7 @@ export default requireApiKey(async (params: InferSchema<typeof schema>, validati
     }
 
     // Verify that the resume belongs to the authenticated user
-    if (existingResume.userId !== validation.userId) {
+    if (existingResume.userId !== userId) {
       return {
         content: [
           {
@@ -100,7 +110,7 @@ export default requireApiKey(async (params: InferSchema<typeof schema>, validati
 
     // Update the resume
     await updateResume(params.resumeId, {
-      userId: validation.userId!,
+      userId: userId!,
       title: params.title || "Untitled Resume",
       name: params.name,
       email: params.email || "",
@@ -150,5 +160,5 @@ export default requireApiKey(async (params: InferSchema<typeof schema>, validati
       ],
     };
   }
-});
+};
 

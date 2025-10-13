@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { type InferSchema, type ToolMetadata } from "xmcp";
-import { requireApiKey } from "../lib/api-key-validator";
 import { getResume } from "../lib/db/resume";
 
 
@@ -22,7 +21,18 @@ export const metadata: ToolMetadata = {
 };
 
 // Tool implementation with API key validation
-export default requireApiKey(async ({ resumeId }: InferSchema<typeof schema>, validation) => {
+export default async ({ resumeId }: InferSchema<typeof schema>, extra?: any) => {
+  const userId: string | undefined = extra?.extra?.userId;
+  if (!userId) {
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify({ error: "Unauthorized: Missing user identity" }, null, 2),
+        },
+      ],
+    };
+  }
   // Fetch the resume with all related data
   const resume = await getResume(resumeId);
 
@@ -39,7 +49,7 @@ export default requireApiKey(async ({ resumeId }: InferSchema<typeof schema>, va
   }
 
   // Verify that the resume belongs to the authenticated user
-  if (resume.userId !== validation.userId) {
+  if (resume.userId !== userId) {
     return {
       content: [
         {
@@ -59,5 +69,5 @@ export default requireApiKey(async ({ resumeId }: InferSchema<typeof schema>, va
       },
     ],
   };
-});
+};
 

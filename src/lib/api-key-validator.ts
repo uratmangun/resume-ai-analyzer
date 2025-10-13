@@ -1,7 +1,6 @@
 import { db } from "./db";
 import { apiKeys } from "./db/schema";
 import { eq } from "drizzle-orm";
-import { requestContext } from "../app/mcp/route";
 
 export type ApiKeyValidationResult = {
   isValid: boolean;
@@ -15,9 +14,7 @@ export type ApiKeyValidationResult = {
  * @returns Validation result with API key details or error message
  */
 export async function validateApiKey(): Promise<ApiKeyValidationResult> {
-  // Access the API key from request context
-  const context = requestContext.getStore();
-  const apiKey = context?.apiKey;
+  const apiKey = undefined as string | undefined;
 
   // Check if API key is provided
   if (!apiKey) {
@@ -27,30 +24,10 @@ export async function validateApiKey(): Promise<ApiKeyValidationResult> {
     };
   }
 
-  // Validate API key against database
-  const [existingKey] = await db
-    .select()
-    .from(apiKeys)
-    .where(eq(apiKeys.key, apiKey))
-    .limit(1);
-
-  if (!existingKey) {
-    return {
-      isValid: false,
-      error: "API key doesn't exist. Please register and create your API key to use the MCP server.",
-    };
-  }
-
-  // Update last used timestamp
-  await db
-    .update(apiKeys)
-    .set({ lastUsed: new Date() })
-    .where(eq(apiKeys.key, apiKey));
-
+  // Short-circuit: API key auth deprecated in favor of OAuth
   return {
-    isValid: true,
-    apiKey: existingKey.key,
-    userId: existingKey.userId,
+    isValid: false,
+    error: "API key auth is disabled. Use OAuth access token.",
   };
 }
 

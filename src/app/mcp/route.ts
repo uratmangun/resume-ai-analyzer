@@ -1,30 +1,19 @@
-import { xmcpHandler } from "@xmcp/adapter";
-import { NextRequest } from "next/server";
-import { AsyncLocalStorage } from "async_hooks";
+import { auth } from "@clerk/nextjs/server";
+import { verifyClerkToken } from "@clerk/mcp-tools/next";
+import { xmcpHandler, withAuth, VerifyToken } from "@xmcp/adapter";
 
-// Create AsyncLocalStorage for request context
-export const requestContext = new AsyncLocalStorage<{
-  apiKey?: string | null;
-}>();
+const verifyToken: VerifyToken = async (req: Request, bearerToken?: string) => {
+  if (!bearerToken) return undefined;
+  const clerkAuth = await auth({ acceptsToken: "oauth_token" as const });
+  return verifyClerkToken(clerkAuth as any, bearerToken);
+};
 
-export async function GET(request: NextRequest) {
-  // Extract query parameters
-  const url = new URL(request.url);
-  const apiKey = url.searchParams.get("api-key");
-  
-  // Run handler within context
-  return requestContext.run({ apiKey }, async () => {
-    return await xmcpHandler(request);
-  });
-}
+const options = {
+  verifyToken,
+  required: true,
+  resourceMetadataPath: "/.well-known/oauth-protected-resource",
+};
 
-export async function POST(request: NextRequest) {
-  // Extract query parameters
-  const url = new URL(request.url);
-  const apiKey = url.searchParams.get("api-key");
-  
-  // Run handler within context
-  return requestContext.run({ apiKey }, async () => {
-    return await xmcpHandler(request);
-  });
-}
+const handler = withAuth(xmcpHandler, options);
+
+export { handler as GET, handler as POST };
