@@ -240,7 +240,7 @@ async function generateIcon(together, prompt, dimensions = ICON_DIMENSIONS) {
  */
 function getAppNameFromConfig() {
   try {
-    const configPath = join(process.cwd(), "public/.well-known/farcaster.json");
+    const configPath = join(process.cwd(), "src/config/farcaster.json");
     const configContent = readFileSync(configPath, "utf8");
     const config = JSON.parse(configContent);
     return config.miniapp?.name || "Mini App";
@@ -275,7 +275,7 @@ function generateIconPrompt(appName) {
  */
 function updateFarcasterConfigWithImages(iconFilename, splashFilename) {
   try {
-    const configPath = join(process.cwd(), "public/.well-known/farcaster.json");
+    const configPath = join(process.cwd(), "src/config/farcaster.json");
 
     if (!existsSync(configPath)) {
       console.warn(
@@ -387,7 +387,7 @@ async function main() {
         console.log("\n🎉 Image generation complete!");
         console.log(`   📁 Icon: public/images/${iconResult.filename}`);
         console.log(`   📁 Splash: public/images/${splashResult.filename}`);
-        console.log("   ✅ Updated: public/.well-known/farcaster.json");
+        console.log("   ✅ Updated: src/config/farcaster.json");
 
         // Success! Exit the retry loop
         return;

@@ -297,7 +297,7 @@ async function generateScreenshotWithRetry(
  */
 function updateFarcasterConfig(domain, screenshotFilenames) {
   try {
-    const configPath = join(process.cwd(), "public/.well-known/farcaster.json");
+    const configPath = join(process.cwd(), "src/config/farcaster.json");
 
     if (!existsSync(configPath)) {
       console.warn(
@@ -414,7 +414,7 @@ async function generateScreenshots() {
       console.log("\n🎉 Screenshot generation complete!");
       console.log(`   📁 Embed: public/images/${successfulScreenshots.embed}`);
       console.log(`   ⏱️  Total time: ${totalDuration}s`);
-      console.log("   ✅ Updated: public/.well-known/farcaster.json");
+      console.log("   ✅ Updated: src/config/farcaster.json");
     } else if (Object.keys(successfulScreenshots).length > 0) {
       // Partial success
       updateFarcasterConfig(
@@ -427,7 +427,7 @@ async function generateScreenshots() {
         console.log(`   ✅ ${type}: public/images/${filename}`);
       });
       console.log(`   ⏱️  Total time: ${totalDuration}s`);
-      console.log("   ✅ Updated: public/.well-known/farcaster.json (partial)");
+      console.log("   ✅ Updated: src/config/farcaster.json (partial)");
 
       // Show failure summary
       console.log("\n💥 Failures summary:");

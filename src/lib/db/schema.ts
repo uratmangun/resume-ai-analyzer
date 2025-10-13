@@ -45,7 +45,7 @@ export const achievements = pgTable('achievements', {
 
 export const apiKeys = pgTable('api_keys', {
   id: uuid('id').primaryKey().defaultRandom(),
-  userId: text('user_id').notNull(),
+  userId: text('user_id').notNull().unique(),
   name: text('name').notNull(),
   key: text('key').notNull().unique(),
   lastUsed: timestamp('last_used'),

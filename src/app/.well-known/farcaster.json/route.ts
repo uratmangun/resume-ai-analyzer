@@ -1,0 +1,57 @@
+import { NextResponse } from 'next/server';
+import { readFileSync } from 'fs';
+import { join } from 'path';
+
+export async function GET() {
+  try {
+    // Read config from the shared config file
+    const configPath = join(process.cwd(), 'src/config/farcaster.json');
+    const configContent = readFileSync(configPath, 'utf8');
+    const config = JSON.parse(configContent);
+
+    return NextResponse.json(config, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'public, max-age=3600, s-maxage=3600',
+      },
+    });
+  } catch (error) {
+    console.error('Error reading farcaster config:', error);
+    
+    // Fallback config if file read fails
+    const fallbackConfig = {
+      accountAssociation: {
+        header: "eyJmaWQiOjMzNDg0MSwidHlwZSI6ImN1c3RvZHkiLCJrZXkiOiIweDcwYzhmNzU5YzdEMzlEQ0JjMzM0NWJDQ2FkNDBDOTJCOEM4NUJjZDMifQ",
+        payload: "eyJkb21haW4iOiI3MDFkN2FhN2U2Y2Mubmdyb2suYXBwIn0",
+        signature: "MHhkMDZlNDM1ZWVkOGE4YjZlYmUwMWQxOTllNGYzMjM0OTljMzcyNWM2ZGFmOWZlMDNmOTY2YWY0YjlhYTg5NGY0NTljY2FhNDEzMjFmZGY2MGY2YTI1N2U1MzcxNDcyNDY2OGVjN2I1YTZlOTFhNDU0ZmZhZmY5OGNlYjVmYWVmYjFi"
+      },
+      miniapp: {
+        version: "1",
+        name: "Resume AI Creator",
+        iconUrl: "https://8468d4091961.ngrok-free.app/images/gemini-icon-2025-09-06T00-34-02-323Z_0.png",
+        homeUrl: "https://8468d4091961.ngrok-free.app",
+        imageUrl: "https://8468d4091961.ngrok-free.app/images/screenshot-embed-2025-09-02T05-37-57-650Z.png",
+        buttonTitle: "Launch App",
+        splashImageUrl: "https://8468d4091961.ngrok-free.app/images/gemini-splash-2025-09-06T00-34-02-489Z.png",
+        splashBackgroundColor: "#0ea5e9",
+        webhookUrl: "https://8468d4091961.ngrok-free.app/api/webhook",
+        subtitle: "A Next.js MCP",
+        description: "Creating your nextjs mcp never been this easy",
+        primaryCategory: "productivity",
+        tags: [
+          "nextjs",
+          "farcaster",
+          "web3",
+          "cloudflare"
+        ]
+      }
+    };
+
+    return NextResponse.json(fallbackConfig, {
+      headers: {
+        'Content-Type': 'application/json',
+        'Cache-Control': 'public, max-age=60, s-maxage=60',
+      },
+    });
+  }
+}

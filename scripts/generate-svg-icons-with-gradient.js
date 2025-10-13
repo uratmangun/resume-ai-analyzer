@@ -345,7 +345,7 @@ function clearExistingSVGIcons() {
  */
 function updateFarcasterConfigWithSVGIcons(domain, iconFilename, splashFilename, imageFilename) {
   try {
-    const configPath = join(process.cwd(), "public/.well-known/farcaster.json");
+    const configPath = join(process.cwd(), "src/config/farcaster.json");
 
     if (!existsSync(configPath)) {
       console.warn(
@@ -546,7 +546,7 @@ async function generateSVGIcons() {
       console.log(`   📁 Splash: public/images/${iconResult.result.splash}`);
       console.log(`   ⏱️  Total time: ${totalDuration}s`);
       if (appDomain) {
-        console.log("   ✅ Updated: public/.well-known/farcaster.json");
+        console.log("   ✅ Updated: src/config/farcaster.json");
       }
       console.log("\n🌈 Each icon features beautiful gradient colors!");
       console.log("🎨 Icons include various shapes: circles, rectangles, triangles, diamonds, hearts, stars, and hexagons");

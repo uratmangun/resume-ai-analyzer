@@ -36,6 +36,20 @@ export async function POST(request: NextRequest) {
   }
 
   try {
+    // Check if user already has an API key
+    const existingKeys = await db
+      .select()
+      .from(apiKeys)
+      .where(eq(apiKeys.userId, userId))
+      .limit(1);
+
+    if (existingKeys.length > 0) {
+      return NextResponse.json(
+        { error: 'You can only have one API key. Please delete your existing key first.' },
+        { status: 400 }
+      );
+    }
+
     const body = await request.json();
     const { name } = body;
 

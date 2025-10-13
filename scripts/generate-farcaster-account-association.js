@@ -24,7 +24,7 @@ const {
 class FarcasterAccountAssociationGenerator {
   constructor(domain) {
     this.domain = domain;
-    this.manifestPath = join(process.cwd(), 'public/.well-known/farcaster.json');
+    this.manifestPath = join(process.cwd(), 'src/config/farcaster.json');
   }
 
   /**
