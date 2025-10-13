@@ -142,15 +142,8 @@ function HomeContent() {
   }, []);
 
   const copyMcpUrl = () => {
-    const firstApiKey = apiKeys[0]?.key;
-    if (!firstApiKey) {
-      toast.error('No API Key', {
-        description: 'Please create an API key first.',
-      });
-      return;
-    }
     const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
-    const mcpUrl = `${baseUrl}/mcp?api-key=${firstApiKey}`;
+    const mcpUrl = `${baseUrl}/mcp`;
     navigator.clipboard.writeText(mcpUrl);
     toast.success('Copied!', {
       description: 'MCP URL copied to clipboard.',
@@ -503,28 +496,26 @@ function HomeContent() {
             <input
               type="text"
               readOnly
-              value={typeof window !== 'undefined' ? `${window.location.origin}/mcp?api-key=${apiKeys.length > 0 ? apiKeys[0].key : '<get the api key after login>'}` : ''}
+              value={typeof window !== 'undefined' ? `${window.location.origin}/mcp` : ''}
               className="flex-1 rounded-lg border border-slate-300 dark:border-slate-600 bg-slate-50 dark:bg-slate-900 px-4 py-2 text-slate-800 dark:text-slate-100 font-mono text-sm"
             />
             <SignedIn>
-              {apiKeys.length > 0 && (
-                <button
-                  type="button"
-                  onClick={copyMcpUrl}
-                  className="inline-flex items-center justify-center rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-400"
-                  title="Copy to clipboard"
-                >
-                  <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                  </svg>
-                </button>
-              )}
+              <button
+                type="button"
+                onClick={copyMcpUrl}
+                className="inline-flex items-center justify-center rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-400"
+                title="Copy to clipboard"
+              >
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 16H6a2 2 0 01-2-2V6a2 2 0 012-2h8a2 2 0 012 2v2m-6 12h8a2 2 0 002-2v-8a2 2 0 00-2-2h-8a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                </svg>
+              </button>
             </SignedIn>
           </div>
           <SignedIn>
             {apiKeys.length === 0 && (
               <div className="mt-3 text-sm text-slate-600 dark:text-slate-300">
-                No API key found.{' '}
+                No API key found.{" "}
                 <Link href="/api-keys" className="text-sky-600 dark:text-sky-400 hover:underline">
                   Create one here
                 </Link>
@@ -532,14 +523,6 @@ function HomeContent() {
               </div>
             )}
           </SignedIn>
-          <SignedOut>
-            <div className="mt-3 text-sm text-slate-600 dark:text-slate-300">
-              <Link href="/sign-in" className="text-sky-600 dark:text-sky-400 hover:underline">
-                Sign in
-              </Link>
-              {' '}to get your API key.
-            </div>
-          </SignedOut>
         </section>
 
         <SignedOut>

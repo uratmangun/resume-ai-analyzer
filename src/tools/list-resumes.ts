@@ -1,6 +1,5 @@
 import { z } from "zod";
 import { type InferSchema, type ToolMetadata } from "xmcp";
-import { requireApiKey } from "../lib/api-key-validator";
 import { db } from "../lib/db";
 import { resumes } from "../lib/db/schema";
 import { eq, desc } from "drizzle-orm";
@@ -23,7 +22,18 @@ export const metadata: ToolMetadata = {
 };
 
 // Tool implementation with API key validation
-export default requireApiKey(async ({ limit = 20 }: InferSchema<typeof schema>, validation) => {
+export default async ({ limit = 20 }: InferSchema<typeof schema>, extra?: any) => {
+  const userId: string | undefined = extra?.extra?.userId;
+  if (!userId) {
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify({ error: "Unauthorized: Missing user identity" }, null, 2),
+        },
+      ],
+    };
+  }
   // Fetch all resumes for the authenticated user
   const userResumes = await db
     .select({
@@ -37,7 +47,7 @@ export default requireApiKey(async ({ limit = 20 }: InferSchema<typeof schema>, 
       updatedAt: resumes.updatedAt,
     })
     .from(resumes)
-    .where(eq(resumes.userId, validation.userId!))
+    .where(eq(resumes.userId, userId!))
     .orderBy(desc(resumes.createdAt))
     .limit(limit);
 
@@ -50,5 +60,5 @@ export default requireApiKey(async ({ limit = 20 }: InferSchema<typeof schema>, 
       },
     ],
   };
-});
+};
 

@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { type InferSchema, type ToolMetadata } from "xmcp";
-import { requireApiKey } from "../lib/api-key-validator";
 import { createResume, getResume } from "../lib/db/resume";
+import type { WorkHistoryEntry, ProjectEntry, AchievementEntry } from "../lib/db/resume";
 
 // Define schemas for nested objects
 const workHistorySchema = z.object({
@@ -48,7 +48,18 @@ export const metadata: ToolMetadata = {
 };
 
 // Tool implementation with API key validation
-export default requireApiKey(async (params: InferSchema<typeof schema>, validation) => {
+export default async (params: InferSchema<typeof schema>, extra?: any) => {
+  const userId: string | undefined = extra?.extra?.userId;
+  if (!userId) {
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify({ error: "Unauthorized: Missing user identity" }, null, 2),
+        },
+      ],
+    };
+  }
   try {
     // Filter out empty entries from arrays (matching frontend behavior)
     const filteredWorkHistory = (params.workHistory || []).filter((entry) =>
@@ -72,15 +83,15 @@ export default requireApiKey(async (params: InferSchema<typeof schema>, validati
 
     // Create the resume
     const resumeId = await createResume({
-      userId: validation.userId!,
+      userId: userId!,
       title: params.title || "Untitled Resume",
       name: params.name,
       email: params.email || "",
       github: params.github && params.github.trim().length > 0 ? params.github : undefined,
       description: params.description && params.description.trim().length > 0 ? params.description : undefined,
-      workHistory: filteredWorkHistory,
-      projects: filteredProjects,
-      achievements: filteredAchievements,
+      workHistory: filteredWorkHistory as unknown as WorkHistoryEntry[],
+      projects: filteredProjects as unknown as ProjectEntry[],
+      achievements: filteredAchievements as unknown as AchievementEntry[],
     });
 
     // Fetch the complete resume to return to the user
@@ -122,5 +133,5 @@ export default requireApiKey(async (params: InferSchema<typeof schema>, validati
       ],
     };
   }
-});
+};
 
