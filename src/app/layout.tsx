@@ -13,42 +13,25 @@ const geistMono = Geist_Mono({
   subsets: ["latin"],
 });
 
-// Read farcaster config at build time
-const getFarcasterConfig = () => {
-  try {
-    const fs = require('fs');
-    const path = require('path');
-    const configPath = path.join(process.cwd(), 'public/.well-known/farcaster.json');
-    const configContent = fs.readFileSync(configPath, 'utf8');
-    return JSON.parse(configContent);
-  } catch (error) {
-    // Fallback config if file read fails
-    return {
-      miniapp: {
-        name: 'Resume AI Creator',
-        buttonTitle: 'Launch App',
-        homeUrl: process.env.NEXT_PUBLIC_APP_DOMAIN || 'https://example.com',
-        imageUrl: process.env.NEXT_PUBLIC_APP_DOMAIN 
-          ? `https://${process.env.NEXT_PUBLIC_APP_DOMAIN}/og-image.png`
-          : 'https://example.com/og-image.png',
-        splashImageUrl: process.env.NEXT_PUBLIC_APP_DOMAIN 
-          ? `https://${process.env.NEXT_PUBLIC_APP_DOMAIN}/splash.png`
-          : 'https://example.com/splash.png',
-        splashBackgroundColor: '#0ea5e9'
-      }
-    };
+// Farcaster config - using inline config since API routes can't be read at build time
+const farcasterConfig = {
+  miniapp: {
+    name: 'Developer Resume AI Creator',
+    buttonTitle: 'Launch App',
+    homeUrl: 'https://8468d4091961.ngrok-free.app',
+    imageUrl: 'https://8468d4091961.ngrok-free.app/images/screenshot-embed-2025-09-02T05-37-57-650Z.png',
+    splashImageUrl: 'https://8468d4091961.ngrok-free.app/images/gemini-splash-2025-09-06T00-34-02-489Z.png',
+    splashBackgroundColor: '#0ea5e9'
   }
 };
 
-const farcasterConfig = getFarcasterConfig();
-
 export const metadata: Metadata = {
   title: {
-    default: 'Resume AI Creator',
-    template: '%s | Resume AI Creator',
+    default: 'Developer Resume AI Creator',
+    template: '%s | Developer Resume AI Creator',
   },
-  description: 'A Farcaster mini app built with Next.js and deployed on Cloudflare Pages',
-  keywords: ['Farcaster', 'Mini App', 'Web3', 'Social', 'Decentralized'],
+  description: 'Build minimal, focused resumes for software developers with this Farcaster-powered Next.js mini app.',
+  keywords: ['Farcaster', 'Mini App', 'Software Developer Resume', 'AI Resume Builder'],
   authors: [{ name: 'Your Name' }],
   creator: 'Your Name',
   publisher: 'Your Company',
@@ -59,17 +42,17 @@ export const metadata: Metadata = {
   },
   metadataBase: new URL(process.env.NEXT_PUBLIC_APP_URL || 'http://localhost:3000'),
   openGraph: {
-    title: 'Resume AI Creator',
-    description: 'A Farcaster mini app built with Next.js',
+    title: 'Developer Resume AI Creator',
+    description: 'Create minimal resumes tailored for software developers with AI assistance.',
     url: '/',
-    siteName: 'Resume AI Creator',
+    siteName: 'Developer Resume AI Creator',
     locale: 'en_US',
     type: 'website',
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'Resume AI Creator',
-    description: 'A Farcaster mini app built with Next.js',
+    title: 'Developer Resume AI Creator',
+    description: 'Generate minimal resumes for software developers using AI and MCP.',
   },
   robots: {
     index: true,

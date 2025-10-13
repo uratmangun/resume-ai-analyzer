@@ -15,6 +15,13 @@
       "when": 1759404972163,
       "tag": "0001_worthless_captain_flint",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "when": 1760363317415,
+      "tag": "0002_brave_blink",
+      "breakpoints": true
     }
   ]
 }

@@ -125,21 +125,7 @@ function HomeContent() {
     }
   }, []);
 
-  // Fetch API keys
-  useEffect(() => {
-    const fetchApiKeys = async () => {
-      try {
-        const response = await fetch('/api/api-keys');
-        if (response.ok) {
-          const data = await response.json();
-          setApiKeys(Array.isArray(data) ? data : []);
-        }
-      } catch (error) {
-        console.error('Failed to fetch API keys:', error);
-      }
-    };
-    fetchApiKeys();
-  }, []);
+
 
   const copyMcpUrl = () => {
     const baseUrl = typeof window !== 'undefined' ? window.location.origin : '';
@@ -439,10 +425,12 @@ function HomeContent() {
         <header className="flex items-center justify-between mb-12">
           <div className="text-center flex-1">
             <h1 className="text-4xl font-bold text-slate-800 dark:text-slate-100 mb-1">
-              Resume AI Creator
+              Developer Resume AI Creator
             </h1>
-            <p className="text-lg text-slate-600 dark:text-slate-300 mb-3">
-              create your resume using ai and mcp
+            <p
+              className="text-lg text-slate-600 dark:text-slate-300 mb-3"
+            >
+              create a minimal resume for software developers only using ai and mcp
             </p>
             <SignedIn>
               <div className="flex items-center justify-center gap-3">
@@ -483,16 +471,14 @@ function HomeContent() {
             </SignedOut>
           </div>
         </header>
-
-        {/* MCP Connection Section - Always visible */}
         <section className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg p-8 mb-6">
           <h2 className="text-2xl font-semibold text-slate-800 dark:text-slate-100 mb-4">
             Connect to MCP
           </h2>
           <p className="text-slate-600 dark:text-slate-300 mb-4">
-            Use this URL to connect your AI assistant via Model Context Protocol:
+            Use this URL to connect your AI assistant via MCP OAuth (API key connectors are still a work in progress):
           </p>
-          <div className="flex gap-2">
+          <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
             <input
               type="text"
               readOnly
@@ -510,17 +496,6 @@ function HomeContent() {
               </svg>
             </button>
           </div>
-          <SignedIn>
-            {apiKeys.length === 0 && (
-              <div className="mt-3 text-sm text-slate-600 dark:text-slate-300">
-                No API key found.{" "}
-                <Link href="/api-keys" className="text-sky-600 dark:text-sky-400 hover:underline">
-                  Create one here
-                </Link>
-                .
-              </div>
-            )}
-          </SignedIn>
         </section>
 
         <SignedOut>

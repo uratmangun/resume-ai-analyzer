@@ -253,7 +253,7 @@ function clearExistingScreenshots() {
  */
 function updateFarcasterConfigWithImages(domain, iconFilename, splashFilename) {
   try {
-    const configPath = join(process.cwd(), "public/.well-known/farcaster.json");
+    const configPath = join(process.cwd(), "src/config/farcaster.json");
 
     if (!existsSync(configPath)) {
       console.warn(
@@ -509,7 +509,7 @@ async function generateScreenshots() {
       console.log(`   📁 Icon: public/images/${embedResult.result.icon}`);
       console.log(`   📁 Splash: public/images/${embedResult.result.splash}`);
       console.log(`   ⏱️  Total time: ${totalDuration}s`);
-      console.log("   ✅ Updated: public/.well-known/farcaster.json");
+      console.log("   ✅ Updated: src/config/farcaster.json");
     } else {
       // Complete failure
       console.log("\n💥 Screenshot generation failed completely!");

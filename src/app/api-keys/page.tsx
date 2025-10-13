@@ -56,14 +56,15 @@ export default function ApiKeysPage() {
 
       if (response.ok) {
         const newKey = await response.json();
-        setApiKeys([newKey, ...apiKeys]);
+        setApiKeys([newKey]);
         setNewKeyName('');
         setShowCreateDialog(false);
         toast.success('API key created successfully');
         // Reveal the newly created key
         setRevealedKeys(new Set([newKey.id]));
       } else {
-        toast.error('Failed to create API key');
+        const errorData = await response.json();
+        toast.error(errorData.error || 'Failed to create API key');
       }
     } catch (error) {
       console.error('Failed to create API key:', error);
@@ -158,14 +159,16 @@ export default function ApiKeysPage() {
             <div className="flex items-center justify-between">
               <div>
                 <h1 className="text-4xl font-bold text-black">API Keys</h1>
-                <p className="text-black mt-2">Manage your API keys for programmatic access</p>
+                <p className="text-black mt-2">Manage your API key for programmatic access (one key per user)</p>
               </div>
-              <button
-                onClick={() => setShowCreateDialog(true)}
-                className="px-6 py-3 rounded-lg bg-sky-600 text-white hover:bg-sky-700 transition-colors font-medium shadow-lg shadow-sky-500/30"
-              >
-                + Create API Key
-              </button>
+              {apiKeys.length === 0 && (
+                <button
+                  onClick={() => setShowCreateDialog(true)}
+                  className="px-6 py-3 rounded-lg bg-sky-600 text-white hover:bg-sky-700 transition-colors font-medium shadow-lg shadow-sky-500/30"
+                >
+                  + Create API Key
+                </button>
+              )}
             </div>
 
             {showCreateDialog && (

@@ -173,7 +173,7 @@ function clearExistingIcons() {
  */
 function getAppNameFromConfig() {
   try {
-    const configPath = join(process.cwd(), "public/.well-known/farcaster.json");
+    const configPath = join(process.cwd(), "src/config/farcaster.json");
     const configContent = readFileSync(configPath, "utf8");
     const config = JSON.parse(configContent);
     return config.miniapp?.name || "Mini App";
@@ -209,7 +209,7 @@ Generate a PNG image that would work perfectly as a Farcaster mini app icon.`;
  */
 function updateFarcasterConfigWithIcon(iconFilename) {
   try {
-    const configPath = join(process.cwd(), "public/.well-known/farcaster.json");
+    const configPath = join(process.cwd(), "src/config/farcaster.json");
 
     if (!existsSync(configPath)) {
       console.warn(
@@ -246,7 +246,7 @@ function updateFarcasterConfigWithIcon(iconFilename) {
  */
 function updateFarcasterConfigWithImages(iconFilename, splashFilename) {
   try {
-    const configPath = join(process.cwd(), "public/.well-known/farcaster.json");
+    const configPath = join(process.cwd(), "src/config/farcaster.json");
 
     if (!existsSync(configPath)) {
       console.warn(
@@ -626,7 +626,7 @@ async function main() {
     console.log("\n🎉 Image generation complete!");
     console.log(`   📁 Icon: public/images/${iconResult.filename}`);
     console.log(`   📁 Splash: public/images/${splashResult.filename}`);
-    console.log("   ✅ Updated: public/.well-known/farcaster.json");
+    console.log("   ✅ Updated: src/config/farcaster.json");
   } catch (error) {
     console.error("\n❌ Error generating icon:");
     console.error("💥", error.message);
