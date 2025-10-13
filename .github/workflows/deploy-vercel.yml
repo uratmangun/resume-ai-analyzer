@@ -24,20 +24,67 @@ jobs:
         with:
           node-version: '20'
 
-      - name: "🛠️ Setup pnpm"
-        uses: pnpm/action-setup@v4
+      - name: "🧰 Setup Bun"
+        uses: oven-sh/setup-bun@v1
         with:
-          version: latest
+          bun-version: 'latest'
+
+      
 
       - name: "📦 Install dependencies"
         run: |
-          # Install dependencies with pnpm
-          pnpm install --frozen-lockfile
+          # Install dependencies with bun
+          if command -v bun >/dev/null 2>&1
+          then
+            echo "Using bun to install dependencies..."
+            bun install; EXIT_CODE=$?
+          else
+            EXIT_CODE=127
+          fi
+          if [ "$EXIT_CODE" -ne 0 ]
+          then
+            echo "bun install failed or bun not available (code: $EXIT_CODE). Trying pnpm..."
+            if command -v pnpm >/dev/null 2>&1
+            then
+              pnpm install --frozen-lockfile && exit 0
+            fi
+            echo "pnpm install failed or pnpm not available. Trying yarn..."
+            if command -v yarn >/dev/null 2>&1
+            then
+              yarn install --frozen-lockfile && exit 0
+            fi
+            echo "yarn install failed or yarn not available. Trying npm..."
+            if command -v npm >/dev/null 2>&1
+            then
+              if [ -f package-lock.json ]
+              then
+                npm ci && exit 0
+              else
+                npm install && exit 0
+              fi
+            fi
+            echo "All package manager installations failed."
+            exit 1
+          fi
         env:
           PYTHON: python3
 
       - name: "🛠️ Install Vercel CLI"
-        run: pnpm add -g vercel@latest
+        run: |
+          if command -v bun >/dev/null 2>&1; then
+            bun add -g vercel@latest && exit 0
+          fi
+          if command -v pnpm >/dev/null 2>&1; then
+            pnpm add -g vercel@latest && exit 0
+          fi
+          if command -v yarn >/dev/null 2>&1; then
+            yarn global add vercel@latest && exit 0
+          fi
+          if command -v npm >/dev/null 2>&1; then
+            npm i -g vercel@latest && exit 0
+          fi
+          echo "Failed to install Vercel CLI with bun/pnpm/yarn/npm"
+          exit 1
 
       - name: "🔎 Find existing Vercel project"
         id: cleanup-projects
@@ -95,7 +142,7 @@ jobs:
             echo "🔨 Building XMCP application..."
             if [ -f "package.json" ] && grep -q '"build"' package.json; then
               echo "Build script found, running build"
-              pnpm run build
+              bun run build
             else
               echo "No build script found in package.json"
               exit 1
@@ -149,7 +196,7 @@ jobs:
             echo "🔨 Building XMCP application..."
             if [ -f "package.json" ] && grep -q '"build"' package.json; then
               echo "Build script found, running build"
-              pnpm run build
+              bun run build
             else
               echo "No build script found in package.json"
               exit 1
@@ -252,7 +299,7 @@ jobs:
           echo "✅ Environment variables configured in Vercel"
 
       - name: "🏗️ Build application"
-        run: pnpm run build
+        run: bun run build
         env:
           NODE_ENV: production
           NODE_OPTIONS: "--max-old-space-size=4096"
