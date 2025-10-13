@@ -1,6 +1,8 @@
 import { z } from "zod";
 import { type InferSchema, type ToolMetadata } from "xmcp";
 import { getResume, updateResume } from "../lib/db/resume";
+import type { AchievementEntry, ProjectEntry, WorkHistoryEntry } from "../lib/db/resume";
+import { getUserIdFromExtra } from "../lib/get-user-id";
 
 // Define schemas for nested objects
 const workHistorySchema = z.object({
@@ -49,7 +51,7 @@ export const metadata: ToolMetadata = {
 
 // Tool implementation with API key validation
 export default async (params: InferSchema<typeof schema>, extra?: any) => {
-  const userId: string | undefined = extra?.extra?.userId;
+  const userId = getUserIdFromExtra(extra);
   if (!userId) {
     return {
       content: [
@@ -116,9 +118,9 @@ export default async (params: InferSchema<typeof schema>, extra?: any) => {
       email: params.email || "",
       github: params.github && params.github.trim().length > 0 ? params.github : undefined,
       description: params.description && params.description.trim().length > 0 ? params.description : undefined,
-      workHistory: filteredWorkHistory,
-      projects: filteredProjects,
-      achievements: filteredAchievements,
+      workHistory: filteredWorkHistory as WorkHistoryEntry[],
+      projects: filteredProjects as ProjectEntry[],
+      achievements: filteredAchievements as AchievementEntry[],
     });
 
     // Fetch the updated resume to return to the user
