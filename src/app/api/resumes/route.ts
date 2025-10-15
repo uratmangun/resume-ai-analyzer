@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { z } from 'zod';
 import { createResume, listResumes } from '@/lib/db/resume';
-import { auth } from '@clerk/nextjs/server';
+import auth0 from '@/lib/auth0';
 
 export const runtime = 'nodejs';
 
@@ -39,7 +39,8 @@ type ResumeInput = z.infer<typeof resumeSchema>;
 
 export async function POST(req: Request) {
   try {
-    const { userId } = await auth();
+    const session = await auth0.getSession();
+    const userId = session?.user?.sub;
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -60,9 +61,22 @@ export async function POST(req: Request) {
       email: data.email,
       github: (data.github && data.github.length > 0) ? data.github : undefined,
       description: (data.description && data.description.length > 0) ? data.description : undefined,
-      workHistory: data.workHistory,
-      projects: data.projects,
-      achievements: data.achievements,
+      workHistory: data.workHistory.map((w) => ({
+        companyName: w.companyName,
+        role: w.role,
+        dateOfWork: w.dateOfWork,
+        description: w.description,
+      })),
+      projects: data.projects.map((p) => ({
+        projectName: p.projectName,
+        projectUrl: p.projectUrl,
+        projectDescription: p.projectDescription,
+      })),
+      achievements: data.achievements.map((a) => ({
+        achievementName: a.achievementName,
+        achievementUrl: a.achievementUrl,
+        achievementDescription: a.achievementDescription,
+      })),
     });
 
     return NextResponse.json({ id }, { status: 201 });
@@ -77,7 +91,8 @@ export async function POST(req: Request) {
 
 export async function GET() {
   try {
-    const { userId } = await auth();
+    const session = await auth0.getSession();
+    const userId = session?.user?.sub;
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }

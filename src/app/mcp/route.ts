@@ -1,5 +1,5 @@
 import { xmcpHandler, withAuth, VerifyToken } from "@xmcp/adapter";
-import { createRemoteJWKSet, jwtVerify } from "jose";
+import { createRemoteJWKSet, jwtVerify, decodeJwt } from "jose";
 let JWKS: ReturnType<typeof createRemoteJWKSet> | null = null;
 const getJWKS = (issuer: string) => {
   if (!JWKS) {
@@ -49,14 +49,24 @@ const verifyToken: VerifyToken = async (req: Request, bearerToken?: string) => {
   // TODO: Replace with actual token verification logic
   // This is just an example implementation
   try {
-    // Normalize issuer: jose expects the exact string in the 'iss' claim, which for Auth0 ends with '/'
-    const issuerBase = (process.env.AUTH0_ISSUER_BASE_URL || (process.env.AUTH0_DOMAIN ? `https://${process.env.AUTH0_DOMAIN}` : "")).replace(/\/+$/, "");
-    if (!issuerBase) { dbg('missing issuer'); return undefined; }
-    const issuerForVerify = ensureTrailingSlash(issuerBase);
-
-    // Verify signature/exp/iss using JWKS; defer audience validation to manual check below
+    // First, decode the JWT without verification to see the actual issuer claim
+    const decoded = decodeJwt(token);
+    const actualIssuer = decoded.iss as string | undefined;
+    
+    dbg('decoded JWT iss claim:', actualIssuer);
+    
+    if (!actualIssuer) {
+      dbg('no iss claim in token');
+      return undefined;
+    }
+    
+    // Get the issuer base (without trailing slash) for JWKS URL
+    const issuerBase = actualIssuer.replace(/\/+$/, "");
+    
+    // Verify using the EXACT issuer from the token
+    dbg('verifying with exact issuer:', actualIssuer);
     const { payload } = await jwtVerify(token, getJWKS(issuerBase), {
-      issuer: issuerForVerify,
+      issuer: actualIssuer, // Use the exact issuer from the token
       clockTolerance: 60,
     });
 
@@ -151,18 +161,12 @@ const verifyToken: VerifyToken = async (req: Request, bearerToken?: string) => {
       : [];
     const clientId = (payload.azp || payload.client_id || "") as string;
     const expiresAt = typeof payload.exp === "number" ? payload.exp * 1000 : undefined;
-    
-    // Extract user ID from the 'sub' claim (Auth0 user identifier)
-    const userId = (payload.sub as string) || "";
 
     return {
       token,
       clientId,
       scopes,
       expiresAt,
-      extra: {
-        userId,
-      },
     };
   } catch (e: any) {
     dbg('jwtVerify error', e?.message || e);

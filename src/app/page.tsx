@@ -2,7 +2,7 @@
 
 import { useEffect, useState, ChangeEvent, FormEvent, Suspense } from 'react';
 import { sdk } from '@farcaster/miniapp-sdk'
-import { SignedIn, SignedOut, SignInButton, UserButton } from '@clerk/nextjs';
+import { SignedIn, SignedOut, SignInButton, UserButton } from '@/components/auth/AuthUI';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { useChat } from '@ai-sdk/react';

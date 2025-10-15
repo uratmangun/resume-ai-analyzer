@@ -1,4 +1,4 @@
-import { auth } from '@clerk/nextjs/server';
+import auth0 from '@/lib/auth0';
 import { NextRequest, NextResponse } from 'next/server';
 import { db } from '@/lib/db';
 import { apiKeys } from '@/lib/db/schema';
@@ -7,7 +7,8 @@ import { randomBytes } from 'crypto';
 
 // GET - List all API keys for the current user
 export async function GET() {
-  const { userId } = await auth();
+  const session = await auth0.getSession();
+  const userId = session?.user?.sub;
 
   if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
@@ -29,7 +30,8 @@ export async function GET() {
 
 // POST - Create a new API key
 export async function POST(request: NextRequest) {
-  const { userId } = await auth();
+  const session = await auth0.getSession();
+  const userId = session?.user?.sub;
 
   if (!userId) {
     return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
