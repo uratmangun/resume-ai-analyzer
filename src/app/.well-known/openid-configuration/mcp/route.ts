@@ -1,21 +1,13 @@
-import { metadataCorsOptionsRequestHandler } from "@clerk/mcp-tools/next";
+import { metadataCorsOptionsRequestHandler } from "@xmcp/adapter";
 
 const corsHandler = metadataCorsOptionsRequestHandler();
 
 const handler = async (req: Request) => {
-  const origin = new URL(req.url).origin;
-  const authServerResp = await fetch(
-    origin + "/.well-known/oauth-authorization-server",
-    { headers: { accept: "application/json" } }
-  );
-  if (!authServerResp.ok) {
-    return new Response("Authorization server metadata not available", {
-      status: authServerResp.status,
-    });
+  const issuer = (process.env.AUTH0_ISSUER_BASE_URL || "").replace(/\/+$/, "");
+  if (!issuer) {
+    return new Response("Missing AUTH0_ISSUER_BASE_URL", { status: 500 });
   }
-  const meta = (await authServerResp.json()) as any;
-  const issuer = meta.issuer as string;
-  const url = issuer.replace(/\/+$/, "") + "/.well-known/openid-configuration";
+  const url = issuer + "/.well-known/openid-configuration";
   const upstream = await fetch(url, { headers: { accept: "application/json" } });
   const body = await upstream.text();
   return new Response(body, {

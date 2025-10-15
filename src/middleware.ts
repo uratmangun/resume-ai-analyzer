@@ -1,27 +1,21 @@
-import { clerkMiddleware, createRouteMatcher } from '@clerk/nextjs/server';
+import { Auth0Client } from '@auth0/nextjs-auth0/server';
 
-// Define public routes that don't require authentication
-const isPublicRoute = createRouteMatcher([
-  '/',
-  '/sign-in(.*)',
-  '/sign-up(.*)',
-  '/api/webhooks(.*)',
-  '/mcp(.*)',
-  '/.well-known(.*)',
-]);
-
-export default clerkMiddleware(async (auth, request) => {
-  // Protect all routes except public ones
-  if (!isPublicRoute(request)) {
-    await auth.protect();
-  }
+const auth0 = new Auth0Client({
+  authorizationParameters: {
+    scope: process.env.AUTH0_SCOPE || 'openid profile email',
+    audience: process.env.AUTH0_AUDIENCE,
+  },
 });
+
+import type { NextRequest } from 'next/server';
+
+export async function middleware(request: NextRequest) {
+  return auth0.middleware(request);
+}
 
 export const config = {
   matcher: [
-    // Skip Next.js internals and all static files, unless found in search params
-    '/((?!_next|[^?]*\\.(?:html?|css|js(?!on)|jpe?g|webp|png|gif|svg|ttf|woff2?|ico|csv|docx?|xlsx?|zip|webmanifest)).*)',
-    // Always run for API routes
-    '/(api|trpc)(.*)',
+    '/((?!.+\\.[\\w]+$|_next|\\.well-known|mcp).*)',
+    '/',
   ],
 };
