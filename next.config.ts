@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
-
+import { baseURL } from "./src/config/baseUrl";
 const nextConfig: NextConfig = {
+  assetPrefix: baseURL,
   /* config options here */
   typescript: {
     // !! WARN !!
