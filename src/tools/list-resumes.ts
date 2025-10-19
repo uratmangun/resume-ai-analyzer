@@ -4,6 +4,7 @@ import { db } from "../lib/db";
 import { resumes } from "../lib/db/schema";
 import { eq, desc } from "drizzle-orm";
 import { getUserIdFromExtra } from "../lib/get-user-id";
+import { getAppsSdkCompatibleHtml, baseURL } from "@/lib/apps-sdk-html";
 
 // Define the schema for tool parameters
 export const schema = {
@@ -13,12 +14,22 @@ export const schema = {
 // Define tool metadata
 export const metadata: ToolMetadata = {
   name: "list-resumes",
-  description: "List all resumes for the authenticated user",
+  description: "List all resumes for the authenticated user in a beautiful UI",
   annotations: {
     title: "List User Resumes",
     readOnlyHint: true,
     destructiveHint: false,
     idempotentHint: true,
+  },
+  _meta: {
+    openai: {
+      toolInvocation: {
+        invoking: "Loading your resumes",
+        invoked: "Resumes loaded",
+      },
+      widgetAccessible: true,
+      resultCanProduceWidget: true,
+    },
   },
 };
 
@@ -35,6 +46,7 @@ export default async ({ limit = 20 }: InferSchema<typeof schema>, extra?: any) =
       ],
     };
   }
+  
   // Fetch all resumes for the authenticated user
   const userResumes = await db
     .select({
@@ -52,14 +64,21 @@ export default async ({ limit = 20 }: InferSchema<typeof schema>, extra?: any) =
     .orderBy(desc(resumes.createdAt))
     .limit(limit);
 
-  // Return raw data as JSON
+  // Get the HTML for the list-resumes page
+  const html = await getAppsSdkCompatibleHtml(baseURL, "/list-resumes");
+
+  // Return HTML with structured content containing the resumes data
   return {
     content: [
       {
         type: "text",
-        text: JSON.stringify(userResumes, null, 2),
+        text: `<html>${html}</html>`,
       },
     ],
+    structuredContent: {
+      resumes: userResumes,
+      limit,
+    },
   };
 };
 

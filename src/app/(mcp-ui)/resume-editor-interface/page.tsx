@@ -31,6 +31,7 @@ interface AchievementEntry {
 }
 
 interface ResumeFormData {
+  resumeId: string;
   name: string;
   title: string;
   email: string;
@@ -41,28 +42,9 @@ interface ResumeFormData {
   achievements: AchievementEntry[];
 }
 
-export default function ResumeFormPage() {
+export default function EditResumePage() {
   const toolOutput = useWidgetProps<{
-    name?: string;
-    title?: string;
-    email?: string;
-    github?: string;
-    description?: string;
-    workHistory?: WorkHistoryEntry[];
-    projects?: ProjectEntry[];
-    achievements?: AchievementEntry[];
-    result?: {
-      structuredContent?: {
-        name?: string;
-        title?: string;
-        email?: string;
-        github?: string;
-        description?: string;
-        workHistory?: WorkHistoryEntry[];
-        projects?: ProjectEntry[];
-        achievements?: AchievementEntry[];
-      }
-    };
+    resumeId?: string;
   }>();
   const maxHeight = useMaxHeight() ?? undefined;
   const displayMode = useDisplayMode();
@@ -71,28 +53,21 @@ export default function ResumeFormPage() {
   const callTool = useCallTool();
   const sendMessage = useSendMessage();
 
-  // Extract form data directly from toolOutput with fallbacks
-  const initialFormData: ResumeFormData = {
-    name: toolOutput?.name || "",
-    title: toolOutput?.title || "",
-    email: toolOutput?.email || "",
-    github: toolOutput?.github || "",
-    description: toolOutput?.description || "",
-    workHistory: toolOutput?.workHistory?.length
-      ? toolOutput.workHistory
-      : [{ companyName: "", role: "", dateOfWork: "", description: "" }],
-    projects: toolOutput?.projects?.length
-      ? toolOutput.projects
-      : [{ projectName: "", projectUrl: "", projectDescription: "" }],
-    achievements: toolOutput?.achievements?.length
-      ? toolOutput.achievements
-      : [{ achievementName: "", achievementUrl: "", achievementDescription: "" }],
-  };
-
-  const [formData, setFormData] = useState<ResumeFormData>(initialFormData);
+  const [formData, setFormData] = useState<ResumeFormData>({
+    resumeId: "",
+    name: "",
+    title: "",
+    email: "",
+    github: "",
+    description: "",
+    workHistory: [{ companyName: "", role: "", dateOfWork: "", description: "" }],
+    projects: [{ projectName: "", projectUrl: "", projectDescription: "" }],
+    achievements: [{ achievementName: "", achievementUrl: "", achievementDescription: "" }],
+  });
   const [statusMessage, setStatusMessage] = useState("");
   const [disabled, setDisabled] = useState(true);
   const [showPreview, setShowPreview] = useState(false);
+  const [loading, setLoading] = useState(false);
   
   // AI Modal state
   const [isAIModalOpen, setIsAIModalOpen] = useState(false);
@@ -106,44 +81,58 @@ export default function ResumeFormPage() {
   }>({ type: 'description' });
 
   useEffect(() => {
-    const hasData = Boolean(
-      toolOutput &&
-      Object.keys(toolOutput).length > 0 &&
-      (
-        toolOutput.name ||
-        toolOutput.title ||
-        toolOutput.email ||
-        toolOutput.github ||
-        toolOutput.description ||
-        (toolOutput.workHistory && toolOutput.workHistory.length > 0) ||
-        (toolOutput.projects && toolOutput.projects.length > 0) ||
-        (toolOutput.achievements && toolOutput.achievements.length > 0)
-      )
-    );
+    const loadResume = async () => {
+      if (!toolOutput?.resumeId) {
+        setDisabled(true);
+        return;
+      }
 
-    if (hasData) {
-
-      setFormData({
-        name: toolOutput?.name || "",
-        title: toolOutput?.title || "",
-        email: toolOutput?.email || "",
-        github: toolOutput?.github || "",
-        description: toolOutput?.description || "",
-        workHistory: toolOutput?.workHistory?.length
-          ? toolOutput.workHistory
-          : [{ companyName: "", role: "", dateOfWork: "", description: "" }],
-        projects: toolOutput?.projects?.length
-          ? toolOutput.projects
-          : [{ projectName: "", projectUrl: "", projectDescription: "" }],
-        achievements: toolOutput?.achievements?.length
-          ? toolOutput.achievements
-          : [{ achievementName: "", achievementUrl: "", achievementDescription: "" }],
-      });
-      setDisabled(false);
-    } else {
+      setLoading(true);
       setDisabled(true);
-    }
-  }, [toolOutput]);
+
+      try {
+        const result = await callTool("get-resume", { resumeId: toolOutput.resumeId });
+        
+        if (result == null) {
+          setStatusMessage("Tool call unavailable outside ChatGPT");
+          return;
+        }
+
+        // Parse the resume data from the tool response
+        const resumeData = JSON.parse(result.result);
+        
+        if (resumeData.error) {
+          setStatusMessage(resumeData.error);
+          return;
+        }
+
+        setFormData({
+          resumeId: resumeData.id || toolOutput.resumeId,
+          name: resumeData.name || "",
+          title: resumeData.title || "",
+          email: resumeData.email || "",
+          github: resumeData.github || "",
+          description: resumeData.description || "",
+          workHistory: resumeData.workHistory?.length
+            ? resumeData.workHistory
+            : [{ companyName: "", role: "", dateOfWork: "", description: "" }],
+          projects: resumeData.projects?.length
+            ? resumeData.projects
+            : [{ projectName: "", projectUrl: "", projectDescription: "" }],
+          achievements: resumeData.achievements?.length
+            ? resumeData.achievements
+            : [{ achievementName: "", achievementUrl: "", achievementDescription: "" }],
+        });
+        setDisabled(false);
+      } catch (error: any) {
+        setStatusMessage(error?.message || "Error loading resume");
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadResume();
+  }, [toolOutput?.resumeId, callTool]);
 
   const handleChange = (field: keyof ResumeFormData) => (
     e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
@@ -219,11 +208,11 @@ export default function ResumeFormPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setStatusMessage("Saving...");
+    setStatusMessage("Updating...");
 
     try {
       const result = await callTool(
-        "create-resume",
+        "update-resume",
         formData as unknown as Record<string, unknown>
       );
 
@@ -232,11 +221,11 @@ export default function ResumeFormPage() {
         return;
       }
 
-      setStatusMessage("Resume created successfully!");
+      setStatusMessage("Resume updated successfully!");
       setShowPreview(true);
       setTimeout(() => setStatusMessage(""), 3000);
     } catch (error: any) {
-      setStatusMessage(error?.message || "Error saving resume");
+      setStatusMessage(error?.message || "Error updating resume");
     }
   };
 
@@ -292,7 +281,7 @@ named the pdf file ${formData.name}.pdf
       currentField.type === 'project' ? `projects[${currentField.index}].projectDescription` :
       `achievements[${currentField.index}].achievementDescription`;
     
-    const prompt = `please proofread key \`${fieldKey}\` in this data:\n\n${JSON.stringify(formData, null, 2)} \nthen use tool draft-create-resume with updated data`;
+    const prompt = `please proofread key \`${fieldKey}\` in this data:\n\n${JSON.stringify(formData, null, 2)}`;
     await sendMessage(prompt);
   };
 
@@ -306,7 +295,7 @@ named the pdf file ${formData.name}.pdf
       currentField.type === 'project' ? `projects[${currentField.index}].projectDescription` :
       `achievements[${currentField.index}].achievementDescription`;
     
-    const prompt = `please translate \`${fieldKey}\` from \`${translateFromLanguage}\` to \`${translateToLanguage}\` from this data:\n\n${JSON.stringify(formData, null, 2)} \nthen use tool draft-create-resume with updated data`;
+    const prompt = `please translate \`${fieldKey}\` from \`${translateFromLanguage}\` to \`${translateToLanguage}\` from this data:\n\n${JSON.stringify(formData, null, 2)}`;
     await sendMessage(prompt);
   };
 
@@ -369,7 +358,7 @@ named the pdf file ${formData.name}.pdf
         {!showPreview ? (
           <section className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg p-8 relative">
             <h2 className="text-2xl font-semibold text-slate-800 dark:text-slate-100 mb-6">
-              Build your resume
+              Edit your resume
             </h2>
             {disabled && (
               <div className="relative z-30 mb-6">
@@ -378,7 +367,7 @@ named the pdf file ${formData.name}.pdf
                     <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
                     <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v3a5 5 0 00-5 5H4z" />
                   </svg>
-                  <span className="text-sm">Loading form data...</span>
+                  <span className="text-sm">Loading resume data...</span>
                 </div>
                 <div className="mt-4 space-y-3">
                   <div className="h-3 w-1/3 rounded bg-slate-200/70 dark:bg-slate-700/50 animate-pulse" />
@@ -780,7 +769,7 @@ named the pdf file ${formData.name}.pdf
                     type="submit"
                     className="inline-flex items-center rounded-lg bg-sky-600 px-5 py-2 text-sm font-semibold text-white transition hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-400"
                   >
-                    Create resume
+                    Update resume
                   </button>
 
                   {statusMessage && (
