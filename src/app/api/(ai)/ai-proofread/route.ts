@@ -16,7 +16,7 @@ Maintain original formatting, bullet points, and line breaks. Do not add content
 Return ONLY the corrected text without explanations, notes, or quotes.`;
 
     const result = streamText({
-      model: openrouter.chat('openai/gpt-5-nano'),
+      model: openrouter.chat('z-ai/glm-4.5-air:free'),
       system: systemMessage,
       messages: convertToModelMessages(messages),
     });

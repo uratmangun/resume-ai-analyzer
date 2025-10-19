@@ -8,6 +8,9 @@ const isPublicRoute = createRouteMatcher([
   '/api/webhooks(.*)',
   '/mcp(.*)',
   '/.well-known(.*)',
+  '/draft-create-resume(.*)',
+  '/list-resumes(.*)',
+  '/resume-editor-interface(.*)',
 ]);
 
 export default clerkMiddleware(async (auth, request) => {
