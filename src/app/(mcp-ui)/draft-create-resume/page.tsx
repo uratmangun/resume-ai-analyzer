@@ -9,6 +9,7 @@ import {
   useIsChatGptApp,
 } from "@/app/hooks";
 import { useCallTool } from "@/app/hooks/use-call-tool";
+import { useSendMessage } from "@/app/hooks/use-send-message";
 
 interface WorkHistoryEntry {
   companyName: string;
@@ -50,20 +51,25 @@ export default function ResumeFormPage() {
     workHistory?: WorkHistoryEntry[];
     projects?: ProjectEntry[];
     achievements?: AchievementEntry[];
-     result?: { structuredContent?: { name?: string;
-    title?: string;
-    email?: string;
-    github?: string;
-    description?: string;
-    workHistory?: WorkHistoryEntry[];
-    projects?: ProjectEntry[];
-    achievements?: AchievementEntry[]; } };
+    result?: {
+      structuredContent?: {
+        name?: string;
+        title?: string;
+        email?: string;
+        github?: string;
+        description?: string;
+        workHistory?: WorkHistoryEntry[];
+        projects?: ProjectEntry[];
+        achievements?: AchievementEntry[];
+      }
+    };
   }>();
   const maxHeight = useMaxHeight() ?? undefined;
   const displayMode = useDisplayMode();
   const requestDisplayMode = useRequestDisplayMode();
   const isChatGptApp = useIsChatGptApp();
   const callTool = useCallTool();
+  const sendMessage = useSendMessage();
 
   // Extract form data directly from toolOutput with fallbacks
   const initialFormData: ResumeFormData = {
@@ -72,20 +78,21 @@ export default function ResumeFormPage() {
     email: toolOutput?.email || "",
     github: toolOutput?.github || "",
     description: toolOutput?.description || "",
-    workHistory: toolOutput?.workHistory?.length 
-      ? toolOutput.workHistory 
+    workHistory: toolOutput?.workHistory?.length
+      ? toolOutput.workHistory
       : [{ companyName: "", role: "", dateOfWork: "", description: "" }],
-    projects: toolOutput?.projects?.length 
-      ? toolOutput.projects 
+    projects: toolOutput?.projects?.length
+      ? toolOutput.projects
       : [{ projectName: "", projectUrl: "", projectDescription: "" }],
-    achievements: toolOutput?.achievements?.length 
-      ? toolOutput.achievements 
+    achievements: toolOutput?.achievements?.length
+      ? toolOutput.achievements
       : [{ achievementName: "", achievementUrl: "", achievementDescription: "" }],
   };
 
   const [formData, setFormData] = useState<ResumeFormData>(initialFormData);
   const [statusMessage, setStatusMessage] = useState("");
   const [disabled, setDisabled] = useState(true);
+  const [showPreview, setShowPreview] = useState(false);
 
   useEffect(() => {
     const hasData = Boolean(
@@ -104,7 +111,7 @@ export default function ResumeFormPage() {
     );
 
     if (hasData) {
-     
+
       setFormData({
         name: toolOutput?.name || "",
         title: toolOutput?.title || "",
@@ -214,11 +221,32 @@ export default function ResumeFormPage() {
         return;
       }
 
-      setStatusMessage("Resume saved successfully!");
+      setStatusMessage("Resume created successfully!");
+      setShowPreview(true);
       setTimeout(() => setStatusMessage(""), 3000);
     } catch (error: any) {
       setStatusMessage(error?.message || "Error saving resume");
     }
+  };
+
+  const handleDownloadPdf = async () => {
+    const prompt = `using this data:
+
+${JSON.stringify(formData)}
+
+create a stylized pdf do not show the title of the resume just give me beautiful colored pdf file and give me the download link
+named the pdf file ${formData.name}.pdf
+`;
+
+    await sendMessage(prompt);
+  };
+
+  const handleListResumes = async () => {
+    await sendMessage('list-resumes');
+  };
+
+  const handleDraftCreateResume = async () => {
+    await sendMessage('draft-create-resume');
   };
 
   return (
@@ -277,383 +305,589 @@ export default function ResumeFormPage() {
       )}
 
       <div className="max-w-4xl mx-auto">
-        <section className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg p-8 relative">
-          <h2 className="text-2xl font-semibold text-slate-800 dark:text-slate-100 mb-6">
-            Build your resume
-          </h2>
-          {disabled && (
-            <div className="relative z-30 mb-6">
-              <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
-                <svg className="h-5 w-5 animate-spin text-slate-400" viewBox="0 0 24 24" aria-hidden="true">
-                  <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
-                  <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v3a5 5 0 00-5 5H4z" />
-                </svg>
-                <span className="text-sm">Loading form data...</span>
-              </div>
-              <div className="mt-4 space-y-3">
-                <div className="h-3 w-1/3 rounded bg-slate-200/70 dark:bg-slate-700/50 animate-pulse" />
-                <div className="h-10 rounded bg-slate-200/70 dark:bg-slate-700/50 animate-pulse" />
-                <div className="grid grid-cols-2 gap-3">
+        {!showPreview ? (
+          <section className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg p-8 relative">
+            <h2 className="text-2xl font-semibold text-slate-800 dark:text-slate-100 mb-6">
+              Build your resume
+            </h2>
+            {disabled && (
+              <div className="relative z-30 mb-6">
+                <div className="flex items-center gap-2 text-slate-600 dark:text-slate-300">
+                  <svg className="h-5 w-5 animate-spin text-slate-400" viewBox="0 0 24 24" aria-hidden="true">
+                    <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4" fill="none" />
+                    <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8v3a5 5 0 00-5 5H4z" />
+                  </svg>
+                  <span className="text-sm">Loading form data...</span>
+                </div>
+                <div className="mt-4 space-y-3">
+                  <div className="h-3 w-1/3 rounded bg-slate-200/70 dark:bg-slate-700/50 animate-pulse" />
                   <div className="h-10 rounded bg-slate-200/70 dark:bg-slate-700/50 animate-pulse" />
-                  <div className="h-10 rounded bg-slate-200/70 dark:bg-slate-700/50 animate-pulse" />
-                </div>
-              </div>
-            </div>
-          )}
-          {disabled && (
-            <div aria-hidden className="absolute inset-0 z-20 bg-white/40 dark:bg-slate-900/30" />
-          )}
-          <form className="space-y-6 relative z-10" onSubmit={handleSubmit}>
-            <fieldset disabled={disabled} aria-disabled={disabled} className={disabled ? "pointer-events-none select-none" : undefined}>
-            <div className="flex flex-col">
-              <label htmlFor="title" className="text-sm font-medium text-slate-600 dark:text-slate-300 mb-2">
-                Resume Title *
-              </label>
-              <input
-                id="title"
-                name="title"
-                type="text"
-                required
-                placeholder="e.g. Software Engineer Resume 2024"
-                value={formData.title}
-                onChange={handleChange("title")}
-                className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-4 py-2 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
-              />
-            </div>
-
-            <div className="grid gap-6 md:grid-cols-2">
-              <div className="flex flex-col">
-                <label htmlFor="name" className="text-sm font-medium text-slate-600 dark:text-slate-300 mb-2">
-                  Name *
-                </label>
-                <input
-                  id="name"
-                  name="name"
-                  type="text"
-                  required
-                  value={formData.name}
-                  onChange={handleChange("name")}
-                  className="rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-4 py-2 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
-                />
-              </div>
-              <div className="flex flex-col">
-                <label htmlFor="email" className="text-sm font-medium text-slate-600 dark:text-slate-300 mb-2">
-                  Email
-                </label>
-                <input
-                  id="email"
-                  name="email"
-                  type="email"
-                  value={formData.email}
-                  onChange={handleChange("email")}
-                  className="rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-4 py-2 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
-                />
-              </div>
-            </div>
-
-            <div className="flex flex-col">
-              <label htmlFor="github" className="text-sm font-medium text-slate-600 dark:text-slate-300 mb-2">
-                GitHub link
-              </label>
-              <input
-                id="github"
-                name="github"
-                type="url"
-                placeholder="https://github.com/username"
-                value={formData.github}
-                onChange={handleChange("github")}
-                className="rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-4 py-2 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
-              />
-            </div>
-
-            <div className="flex flex-col">
-              <label htmlFor="description" className="text-sm font-medium text-slate-600 dark:text-slate-300 mb-2">
-                Professional summary
-              </label>
-              <textarea
-                id="description"
-                name="description"
-                rows={4}
-                value={formData.description}
-                onChange={handleChange("description")}
-                className="rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-4 py-2 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
-              />
-            </div>
-
-            <div className="flex flex-col gap-6">
-              <div className="flex flex-col gap-4">
-                <div className="flex items-center justify-between">
-                  <label className="text-sm font-medium text-slate-600 dark:text-slate-300">
-                    Work history
-                  </label>
-                  <button
-                    type="button"
-                    onClick={addWorkEntry}
-                    className="text-sm font-medium text-sky-600 hover:text-sky-700"
-                  >
-                    + Add role
-                  </button>
-                </div>
-                {formData.workHistory.map((entry, index) => (
-                  <div
-                    key={`work-${index}`}
-                    className="flex flex-col gap-3 p-4 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50"
-                  >
-                    <div className="grid gap-3 md:grid-cols-2">
-                      <div className="flex flex-col">
-                        <label
-                          htmlFor={`company-${index}`}
-                          className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1"
-                        >
-                          Company name
-                        </label>
-                        <input
-                          id={`company-${index}`}
-                          type="text"
-                          placeholder="e.g. Google"
-                          value={entry.companyName}
-                          onChange={handleWorkChange(index, "companyName")}
-                          className="rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
-                        />
-                      </div>
-                      <div className="flex flex-col">
-                        <label
-                          htmlFor={`role-${index}`}
-                          className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1"
-                        >
-                          Role
-                        </label>
-                        <input
-                          id={`role-${index}`}
-                          type="text"
-                          placeholder="e.g. Senior Software Engineer"
-                          value={entry.role}
-                          onChange={handleWorkChange(index, "role")}
-                          className="rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
-                        />
-                      </div>
-                    </div>
-                    <div className="flex flex-col">
-                      <label
-                        htmlFor={`date-${index}`}
-                        className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1"
-                      >
-                        Date of work
-                      </label>
-                      <input
-                        id={`date-${index}`}
-                        type="text"
-                        placeholder="e.g. Jan 2020 - Dec 2022"
-                        value={entry.dateOfWork}
-                        onChange={handleWorkChange(index, "dateOfWork")}
-                        className="rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
-                      />
-                    </div>
-                    <div className="flex flex-col">
-                      <label
-                        htmlFor={`work-desc-${index}`}
-                        className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1"
-                      >
-                        Description
-                      </label>
-                      <textarea
-                        id={`work-desc-${index}`}
-                        rows={3}
-                        placeholder="Describe your responsibilities and achievements"
-                        value={entry.description}
-                        onChange={handleWorkChange(index, "description")}
-                        className="rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
-                      />
-                    </div>
-                    {formData.workHistory.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={removeWorkEntry(index)}
-                        className="self-end text-xs font-medium text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
-                      >
-                        Remove
-                      </button>
-                    )}
+                  <div className="grid grid-cols-2 gap-3">
+                    <div className="h-10 rounded bg-slate-200/70 dark:bg-slate-700/50 animate-pulse" />
+                    <div className="h-10 rounded bg-slate-200/70 dark:bg-slate-700/50 animate-pulse" />
                   </div>
-                ))}
-              </div>
-
-              <div className="flex flex-col gap-4">
-                <div className="flex items-center justify-between">
-                  <label className="text-sm font-medium text-slate-600 dark:text-slate-300">
-                    Project highlights
-                  </label>
-                  <button
-                    type="button"
-                    onClick={addProjectEntry}
-                    className="text-sm font-medium text-sky-600 hover:text-sky-700"
-                  >
-                    + Add project
-                  </button>
                 </div>
-                {formData.projects.map((entry, index) => (
-                  <div
-                    key={`project-${index}`}
-                    className="flex flex-col gap-3 p-4 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50"
-                  >
-                    <div className="flex flex-col">
-                      <label
-                        htmlFor={`project-name-${index}`}
-                        className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1"
-                      >
-                        Project name
-                      </label>
-                      <input
-                        id={`project-name-${index}`}
-                        type="text"
-                        placeholder="e.g. E-commerce Platform"
-                        value={entry.projectName}
-                        onChange={handleProjectChange(index, "projectName")}
-                        className="rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
-                      />
-                    </div>
-                    <div className="flex flex-col">
-                      <label
-                        htmlFor={`project-url-${index}`}
-                        className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1"
-                      >
-                        Project URL (optional)
-                      </label>
-                      <input
-                        id={`project-url-${index}`}
-                        type="url"
-                        placeholder="e.g. https://github.com/username/project"
-                        value={entry.projectUrl}
-                        onChange={handleProjectChange(index, "projectUrl")}
-                        className="rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
-                      />
-                    </div>
-                    <div className="flex flex-col">
-                      <label
-                        htmlFor={`project-desc-${index}`}
-                        className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1"
-                      >
-                        Project description
-                      </label>
-                      <textarea
-                        id={`project-desc-${index}`}
-                        rows={3}
-                        placeholder="Describe the project, your role, and key achievements"
-                        value={entry.projectDescription}
-                        onChange={handleProjectChange(index, "projectDescription")}
-                        className="rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
-                      />
-                    </div>
-                    {formData.projects.length > 1 && (
-                      <button
-                        type="button"
-                        onClick={removeProjectEntry(index)}
-                        className="self-end text-xs font-medium text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
-                      >
-                        Remove
-                      </button>
-                    )}
-                  </div>
-                ))}
               </div>
-            </div>
+            )}
+            {disabled && (
+              <div aria-hidden className="absolute inset-0 z-20 bg-white/40 dark:bg-slate-900/30" />
+            )}
+            <form className="space-y-6 relative z-10" onSubmit={handleSubmit}>
+              <fieldset disabled={disabled} aria-disabled={disabled} className={disabled ? "pointer-events-none select-none" : undefined}>
+                <div className="flex flex-col">
+                  <label htmlFor="title" className="text-sm font-medium text-slate-600 dark:text-slate-300 mb-2">
+                    Resume Title *
+                  </label>
+                  <input
+                    id="title"
+                    name="title"
+                    type="text"
+                    required
+                    placeholder="e.g. Software Engineer Resume 2024"
+                    value={formData.title}
+                    onChange={handleChange("title")}
+                    className="w-full rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-4 py-2 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                  />
+                </div>
 
-            <div className="flex flex-col gap-4">
-              <div className="flex items-center justify-between">
-                <label className="text-sm font-medium text-slate-600 dark:text-slate-300">
-                  Achievements
-                </label>
-                <button
-                  type="button"
-                  onClick={addAchievementEntry}
-                  className="text-sm font-medium text-sky-600 hover:text-sky-700"
-                >
-                  + Add achievement
-                </button>
-              </div>
-              {formData.achievements.map((entry, index) => (
-                <div
-                  key={`achievement-${index}`}
-                  className="flex flex-col gap-3 p-4 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50"
-                >
+                <div className="grid gap-6 md:grid-cols-2">
                   <div className="flex flex-col">
-                    <label
-                      htmlFor={`achievement-name-${index}`}
-                      className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1"
-                    >
-                      Achievement name
+                    <label htmlFor="name" className="text-sm font-medium text-slate-600 dark:text-slate-300 mb-2">
+                      Name *
                     </label>
                     <input
-                      id={`achievement-name-${index}`}
+                      id="name"
+                      name="name"
                       type="text"
-                      placeholder="e.g. AWS Certified Solutions Architect"
-                      value={entry.achievementName}
-                      onChange={handleAchievementChange(index, "achievementName")}
-                      className="rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                      required
+                      value={formData.name}
+                      onChange={handleChange("name")}
+                      className="rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-4 py-2 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
                     />
                   </div>
                   <div className="flex flex-col">
-                    <label
-                      htmlFor={`achievement-url-${index}`}
-                      className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1"
-                    >
-                      Achievement URL (optional)
+                    <label htmlFor="email" className="text-sm font-medium text-slate-600 dark:text-slate-300 mb-2">
+                      Email
                     </label>
                     <input
-                      id={`achievement-url-${index}`}
-                      type="url"
-                      placeholder="e.g. https://www.credly.com/badges/..."
-                      value={entry.achievementUrl}
-                      onChange={handleAchievementChange(index, "achievementUrl")}
-                      className="rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                      id="email"
+                      name="email"
+                      type="email"
+                      value={formData.email}
+                      onChange={handleChange("email")}
+                      className="rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-4 py-2 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
                     />
                   </div>
-                  <div className="flex flex-col">
-                    <label
-                      htmlFor={`achievement-desc-${index}`}
-                      className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1"
-                    >
-                      Achievement description
+                </div>
+
+                <div className="flex flex-col">
+                  <label htmlFor="github" className="text-sm font-medium text-slate-600 dark:text-slate-300 mb-2">
+                    GitHub link
+                  </label>
+                  <input
+                    id="github"
+                    name="github"
+                    type="url"
+                    placeholder="https://github.com/username"
+                    value={formData.github}
+                    onChange={handleChange("github")}
+                    className="rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-4 py-2 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                  />
+                </div>
+
+                <div className="flex flex-col">
+                  <label htmlFor="description" className="text-sm font-medium text-slate-600 dark:text-slate-300 mb-2">
+                    Professional summary
+                  </label>
+                  <textarea
+                    id="description"
+                    name="description"
+                    rows={4}
+                    value={formData.description}
+                    onChange={handleChange("description")}
+                    className="rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-4 py-2 text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                  />
+                </div>
+
+                <div className="flex flex-col gap-6">
+                  <div className="flex flex-col gap-4">
+                    <div className="flex items-center justify-between">
+                      <label className="text-sm font-medium text-slate-600 dark:text-slate-300">
+                        Work history
+                      </label>
+                      <button
+                        type="button"
+                        onClick={addWorkEntry}
+                        className="text-sm font-medium text-sky-600 hover:text-sky-700"
+                      >
+                        + Add role
+                      </button>
+                    </div>
+                    {formData.workHistory.map((entry, index) => (
+                      <div
+                        key={`work-${index}`}
+                        className="flex flex-col gap-3 p-4 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50"
+                      >
+                        <div className="grid gap-3 md:grid-cols-2">
+                          <div className="flex flex-col">
+                            <label
+                              htmlFor={`company-${index}`}
+                              className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1"
+                            >
+                              Company name
+                            </label>
+                            <input
+                              id={`company-${index}`}
+                              type="text"
+                              placeholder="e.g. Google"
+                              value={entry.companyName}
+                              onChange={handleWorkChange(index, "companyName")}
+                              className="rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                            />
+                          </div>
+                          <div className="flex flex-col">
+                            <label
+                              htmlFor={`role-${index}`}
+                              className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1"
+                            >
+                              Role
+                            </label>
+                            <input
+                              id={`role-${index}`}
+                              type="text"
+                              placeholder="e.g. Senior Software Engineer"
+                              value={entry.role}
+                              onChange={handleWorkChange(index, "role")}
+                              className="rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                            />
+                          </div>
+                        </div>
+                        <div className="flex flex-col">
+                          <label
+                            htmlFor={`date-${index}`}
+                            className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1"
+                          >
+                            Date of work
+                          </label>
+                          <input
+                            id={`date-${index}`}
+                            type="text"
+                            placeholder="e.g. Jan 2020 - Dec 2022"
+                            value={entry.dateOfWork}
+                            onChange={handleWorkChange(index, "dateOfWork")}
+                            className="rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                          />
+                        </div>
+                        <div className="flex flex-col">
+                          <label
+                            htmlFor={`work-desc-${index}`}
+                            className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1"
+                          >
+                            Description
+                          </label>
+                          <textarea
+                            id={`work-desc-${index}`}
+                            rows={3}
+                            placeholder="Describe your responsibilities and achievements"
+                            value={entry.description}
+                            onChange={handleWorkChange(index, "description")}
+                            className="rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                          />
+                        </div>
+                        {formData.workHistory.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={removeWorkEntry(index)}
+                            className="self-end text-xs font-medium text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                          >
+                            Remove
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+
+                  <div className="flex flex-col gap-4">
+                    <div className="flex items-center justify-between">
+                      <label className="text-sm font-medium text-slate-600 dark:text-slate-300">
+                        Project highlights
+                      </label>
+                      <button
+                        type="button"
+                        onClick={addProjectEntry}
+                        className="text-sm font-medium text-sky-600 hover:text-sky-700"
+                      >
+                        + Add project
+                      </button>
+                    </div>
+                    {formData.projects.map((entry, index) => (
+                      <div
+                        key={`project-${index}`}
+                        className="flex flex-col gap-3 p-4 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50"
+                      >
+                        <div className="flex flex-col">
+                          <label
+                            htmlFor={`project-name-${index}`}
+                            className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1"
+                          >
+                            Project name
+                          </label>
+                          <input
+                            id={`project-name-${index}`}
+                            type="text"
+                            placeholder="e.g. E-commerce Platform"
+                            value={entry.projectName}
+                            onChange={handleProjectChange(index, "projectName")}
+                            className="rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                          />
+                        </div>
+                        <div className="flex flex-col">
+                          <label
+                            htmlFor={`project-url-${index}`}
+                            className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1"
+                          >
+                            Project URL (optional)
+                          </label>
+                          <input
+                            id={`project-url-${index}`}
+                            type="url"
+                            placeholder="e.g. https://github.com/username/project"
+                            value={entry.projectUrl}
+                            onChange={handleProjectChange(index, "projectUrl")}
+                            className="rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                          />
+                        </div>
+                        <div className="flex flex-col">
+                          <label
+                            htmlFor={`project-desc-${index}`}
+                            className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1"
+                          >
+                            Project description
+                          </label>
+                          <textarea
+                            id={`project-desc-${index}`}
+                            rows={3}
+                            placeholder="Describe the project, your role, and key achievements"
+                            value={entry.projectDescription}
+                            onChange={handleProjectChange(index, "projectDescription")}
+                            className="rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                          />
+                        </div>
+                        {formData.projects.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={removeProjectEntry(index)}
+                            className="self-end text-xs font-medium text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                          >
+                            Remove
+                          </button>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div className="flex flex-col gap-4">
+                  <div className="flex items-center justify-between">
+                    <label className="text-sm font-medium text-slate-600 dark:text-slate-300">
+                      Achievements
                     </label>
-                    <textarea
-                      id={`achievement-desc-${index}`}
-                      rows={3}
-                      placeholder="Describe the achievement, award, or certification"
-                      value={entry.achievementDescription}
-                      onChange={handleAchievementChange(index, "achievementDescription")}
-                      className="rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
-                    />
-                  </div>
-                  {formData.achievements.length > 1 && (
                     <button
                       type="button"
-                      onClick={removeAchievementEntry(index)}
-                      className="self-end text-xs font-medium text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                      onClick={addAchievementEntry}
+                      className="text-sm font-medium text-sky-600 hover:text-sky-700"
                     >
-                      Remove
+                      + Add achievement
                     </button>
+                  </div>
+                  {formData.achievements.map((entry, index) => (
+                    <div
+                      key={`achievement-${index}`}
+                      className="flex flex-col gap-3 p-4 rounded-lg border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50"
+                    >
+                      <div className="flex flex-col">
+                        <label
+                          htmlFor={`achievement-name-${index}`}
+                          className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1"
+                        >
+                          Achievement name
+                        </label>
+                        <input
+                          id={`achievement-name-${index}`}
+                          type="text"
+                          placeholder="e.g. AWS Certified Solutions Architect"
+                          value={entry.achievementName}
+                          onChange={handleAchievementChange(index, "achievementName")}
+                          className="rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                        />
+                      </div>
+                      <div className="flex flex-col">
+                        <label
+                          htmlFor={`achievement-url-${index}`}
+                          className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1"
+                        >
+                          Achievement URL (optional)
+                        </label>
+                        <input
+                          id={`achievement-url-${index}`}
+                          type="url"
+                          placeholder="e.g. https://www.credly.com/badges/..."
+                          value={entry.achievementUrl}
+                          onChange={handleAchievementChange(index, "achievementUrl")}
+                          className="rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                        />
+                      </div>
+                      <div className="flex flex-col">
+                        <label
+                          htmlFor={`achievement-desc-${index}`}
+                          className="text-xs font-medium text-slate-600 dark:text-slate-400 mb-1"
+                        >
+                          Achievement description
+                        </label>
+                        <textarea
+                          id={`achievement-desc-${index}`}
+                          rows={3}
+                          placeholder="Describe the achievement, award, or certification"
+                          value={entry.achievementDescription}
+                          onChange={handleAchievementChange(index, "achievementDescription")}
+                          className="rounded-lg border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900 px-3 py-2 text-sm text-slate-800 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                        />
+                      </div>
+                      {formData.achievements.length > 1 && (
+                        <button
+                          type="button"
+                          onClick={removeAchievementEntry(index)}
+                          className="self-end text-xs font-medium text-slate-500 hover:text-slate-700 dark:text-slate-400 dark:hover:text-slate-200"
+                        >
+                          Remove
+                        </button>
+                      )}
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex items-center justify-between">
+                  <button
+                    type="submit"
+                    className="inline-flex items-center rounded-lg bg-sky-600 px-5 py-2 text-sm font-semibold text-white transition hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-400"
+                  >
+                    Create resume
+                  </button>
+
+                  {statusMessage && (
+                    <span className="text-sm text-slate-500 dark:text-slate-300">
+                      {statusMessage}
+                    </span>
                   )}
                 </div>
-              ))}
-            </div>
+              </fieldset>
+            </form>
+          </section>
+        ) : (
+          <>
 
-            <div className="flex items-center justify-between">
-              <button
-                type="submit"
-                className="inline-flex items-center rounded-lg bg-sky-600 px-5 py-2 text-sm font-semibold text-white transition hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-400"
-              >
-                Save resume
-              </button>
 
-              {statusMessage && (
-                <span className="text-sm text-slate-500 dark:text-slate-300">
-                  {statusMessage}
-                </span>
-              )}
-            </div>
-            </fieldset>
-          </form>
-        </section>
+            {/* Resume Preview Section */}
+            <section className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-lg p-8">
+              <h2 className="text-2xl font-semibold text-slate-800 dark:text-slate-100 mb-6">
+                Resume Preview
+              </h2>
+
+              <div className="space-y-6 text-slate-700 dark:text-slate-200">
+                {/* Header Section */}
+                <div className="border-b border-slate-200 dark:border-slate-700 pb-4">
+                  <h1 className="text-3xl font-bold text-slate-900 dark:text-slate-50 mb-2">
+                    {formData.name || 'Your Name'}
+                  </h1>
+                  <div className="flex flex-wrap gap-3 text-sm">
+                    {formData.email && (
+                      <span className="flex items-center gap-1">
+                        📧 {formData.email}
+                      </span>
+                    )}
+                    {formData.github && (
+                      <a
+                        href={formData.github}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center gap-1 text-sky-600 hover:text-sky-700"
+                      >
+                        🔗 GitHub
+                      </a>
+                    )}
+                  </div>
+                </div>
+
+                {/* Professional Summary */}
+                {formData.description && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-100 mb-2">
+                      Professional Summary
+                    </h3>
+                    <p className="text-sm leading-relaxed whitespace-pre-wrap">
+                      {formData.description}
+                    </p>
+                  </div>
+                )}
+
+                {/* Work History */}
+                {formData.workHistory.some(w => w.companyName || w.role || w.dateOfWork || w.description) && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-100 mb-3">
+                      Work Experience
+                    </h3>
+                    <div className="space-y-4">
+                      {formData.workHistory.map((work, index) => (
+                        (work.companyName || work.role || work.dateOfWork || work.description) && (
+                          <div key={`preview-work-${index}`} className="border-l-2 border-sky-500 pl-4">
+                            <div className="flex justify-between items-start mb-1">
+                              <h4 className="font-semibold text-slate-900 dark:text-slate-50">
+                                {work.role || 'Role Title'}
+                              </h4>
+                              {work.dateOfWork && (
+                                <span className="text-sm text-slate-500 dark:text-slate-400">
+                                  {work.dateOfWork}
+                                </span>
+                              )}
+                            </div>
+                            {work.companyName && (
+                              <p className="text-sm font-medium text-slate-600 dark:text-slate-300 mb-2">
+                                {work.companyName}
+                              </p>
+                            )}
+                            {work.description && (
+                              <p className="text-sm text-slate-600 dark:text-slate-300 whitespace-pre-wrap">
+                                {work.description}
+                              </p>
+                            )}
+                          </div>
+                        )
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Projects */}
+                {formData.projects.some(p => p.projectName || p.projectUrl || p.projectDescription) && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-100 mb-3">
+                      Projects
+                    </h3>
+                    <div className="space-y-4">
+                      {formData.projects.map((project, index) => (
+                        (project.projectName || project.projectUrl || project.projectDescription) && (
+                          <div key={`preview-project-${index}`} className="border-l-2 border-emerald-500 pl-4">
+                            <div className="flex items-start gap-2 mb-1">
+                              <h4 className="font-semibold text-slate-900 dark:text-slate-50">
+                                {project.projectName || 'Project Name'}
+                              </h4>
+                              {project.projectUrl && (
+                                <a
+                                  href={project.projectUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-xs text-sky-600 hover:text-sky-700"
+                                >
+                                  🔗
+                                </a>
+                              )}
+                            </div>
+                            {project.projectDescription && (
+                              <p className="text-sm text-slate-600 dark:text-slate-300 whitespace-pre-wrap">
+                                {project.projectDescription}
+                              </p>
+                            )}
+                          </div>
+                        )
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Achievements */}
+                {formData.achievements.some(a => a.achievementName || a.achievementUrl || a.achievementDescription) && (
+                  <div>
+                    <h3 className="text-lg font-semibold text-slate-800 dark:text-slate-100 mb-3">
+                      Achievements
+                    </h3>
+                    <div className="space-y-4">
+                      {formData.achievements.map((achievement, index) => (
+                        (achievement.achievementName || achievement.achievementUrl || achievement.achievementDescription) && (
+                          <div key={`preview-achievement-${index}`} className="border-l-2 border-amber-500 pl-4">
+                            <div className="flex items-start gap-2 mb-1">
+                              <h4 className="font-semibold text-slate-900 dark:text-slate-50">
+                                {achievement.achievementName || 'Achievement Name'}
+                              </h4>
+                              {achievement.achievementUrl && (
+                                <a
+                                  href={achievement.achievementUrl}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                  className="text-xs text-sky-600 hover:text-sky-700"
+                                >
+                                  🔗
+                                </a>
+                              )}
+                            </div>
+                            {achievement.achievementDescription && (
+                              <p className="text-sm text-slate-600 dark:text-slate-300 whitespace-pre-wrap">
+                                {achievement.achievementDescription}
+                              </p>
+                            )}
+                          </div>
+                        )
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Empty State */}
+                {!formData.name && !formData.email && !formData.description &&
+                  !formData.workHistory.some(w => w.companyName || w.role) &&
+                  !formData.projects.some(p => p.projectName) &&
+                  !formData.achievements.some(a => a.achievementName) && (
+                    <div className="text-center py-8 text-slate-400 dark:text-slate-500">
+                      <p className="text-sm">Your resume preview will appear here</p>
+                    </div>
+                  )}
+              </div>
+
+              {/* Action Buttons */}
+              <div className="mt-6 flex flex-wrap gap-3 justify-start border-t border-slate-200 dark:border-slate-700 pt-6">
+                <button
+                  type="button"
+                  onClick={handleDownloadPdf}
+                  className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-5 py-2 text-sm font-semibold text-white transition hover:bg-emerald-700 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M6.72 13.829c-.24.03-.48.062-.72.096m.72-.096a42.415 42.415 0 0110.56 0m-10.56 0L6.34 18m10.94-4.171c.24.03.48.062.72.096m-.72-.096L17.66 18m0 0l.229 2.523a1.125 1.125 0 01-1.12 1.227H7.231c-.662 0-1.18-.568-1.12-1.227L6.34 18m11.318 0h1.091A2.25 2.25 0 0021 15.75V9.456c0-1.081-.768-2.015-1.837-2.175a48.055 48.055 0 00-1.913-.247M6.34 18H5.25A2.25 2.25 0 013 15.75V9.456c0-1.081.768-2.015 1.837-2.175a48.041 48.041 0 011.913-.247m10.5 0a48.536 48.536 0 00-10.5 0m10.5 0V3.375c0-.621-.504-1.125-1.125-1.125h-8.25c-.621 0-1.125.504-1.125 1.125v3.659M18 10.5h.008v.008H18V10.5zm-3 0h.008v.008H15V10.5z" />
+                  </svg>
+                  Download as pdf
+                </button>
+                <button
+                  type="button"
+                  onClick={handleListResumes}
+                  className="inline-flex items-center gap-2 rounded-lg bg-sky-600 px-5 py-2 text-sm font-semibold text-white transition hover:bg-sky-700 focus:outline-none focus:ring-2 focus:ring-sky-400"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M8.25 6.75h12M8.25 12h12m-12 5.25h12M3.75 6.75h.007v.008H3.75V6.75zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zM3.75 12h.007v.008H3.75V12zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0zm-.375 5.25h.007v.008H3.75v-.008zm.375 0a.375.375 0 11-.75 0 .375.375 0 01.75 0z" />
+                  </svg>
+                  List All Resumes
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDraftCreateResume}
+                  className="inline-flex items-center gap-2 rounded-lg bg-slate-600 px-5 py-2 text-sm font-semibold text-white transition hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-slate-400"
+                >
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" strokeWidth={2} viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 4.5v15m7.5-7.5h-15" />
+                  </svg>
+                  Create Draft Resume
+                </button>
+              </div>
+            </section>
+          </>
+        )}
       </div>
     </div>
   );
