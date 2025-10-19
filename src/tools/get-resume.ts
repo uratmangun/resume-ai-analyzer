@@ -22,7 +22,7 @@ export const metadata: ToolMetadata = {
 };
 
 // Tool implementation with API key validation
-export default async ({ resumeId }: InferSchema<typeof schema>, extra?: any) => {
+export default async ({ resumeId  }: InferSchema<typeof schema>, extra?: any) => {
   const userId = getUserIdFromExtra(extra);
   if (!userId) {
     return {
