@@ -6,7 +6,7 @@ export default function SignInPage() {
       <button
         onClick={() => {
           const returnTo = typeof window !== 'undefined' ? window.location.pathname : '/';
-          window.location.href = `/auth/login?returnTo=${encodeURIComponent(returnTo)}`;
+          window.location.href = `/api/auth/login?returnTo=${encodeURIComponent(returnTo)}`;
         }}
         className="inline-flex items-center rounded-lg bg-sky-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-sky-700"
       >

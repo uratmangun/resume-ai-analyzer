@@ -6,7 +6,7 @@ export default function SignUpPage() {
       <button
         onClick={() => {
           const returnTo = typeof window !== 'undefined' ? '/' : '/';
-          const url = new URL('/auth/login', window.location.origin);
+          const url = new URL('/api/auth/login', window.location.origin);
           url.searchParams.set('screen_hint', 'signup');
           url.searchParams.set('returnTo', returnTo);
           window.location.href = url.toString();

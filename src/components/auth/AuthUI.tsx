@@ -44,7 +44,7 @@ export function SignedOut({ children }: { children: React.ReactNode }) {
 export function SignInButton({ children, mode }: { children: React.ReactNode; mode?: string }) {
   const onClick = () => {
     const returnTo = typeof window !== "undefined" ? window.location.pathname : "/";
-    const url = new URL(`/auth/login`, window.location.origin);
+    const url = new URL(`/api/auth/login`, window.location.origin);
     url.searchParams.set("returnTo", returnTo);
     if (mode === "modal") {
       // Auth0 doesn't support modal natively; we ignore but keep API compatible
@@ -61,7 +61,7 @@ export function UserButton({ afterSignOutUrl = "/" }: { afterSignOutUrl?: string
     const fullUrl = typeof window !== "undefined" 
       ? `${window.location.origin}${afterSignOutUrl}`
       : "http://localhost:3000/";
-    window.location.href = `/auth/logout?returnTo=${encodeURIComponent(fullUrl)}`;
+    window.location.href = `/api/auth/logout?returnTo=${encodeURIComponent(fullUrl)}`;
   };
   return (
     <button onClick={onLogout} className="inline-flex items-center rounded-lg bg-slate-200 px-3 py-2 text-sm font-medium text-slate-900 hover:bg-slate-300">

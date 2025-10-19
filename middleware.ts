@@ -3,15 +3,29 @@ import { NextResponse } from 'next/server';
 import auth0 from '@/lib/auth0';
 
 export async function middleware(request: NextRequest) {
-  // Only use auth0.middleware for /auth/* routes (login, logout, callback)
-  if (request.nextUrl.pathname.startsWith('/auth')) {
+  // Handle CORS preflight
+  if (request.method === "OPTIONS") {
+    const response = new NextResponse(null, { status: 204 });
+    response.headers.set("Access-Control-Allow-Origin", "*");
+    response.headers.set("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
+    response.headers.set("Access-Control-Allow-Headers", "*");
+    return response;
+  }
+
+  // Only use auth0.middleware for /api/auth/* routes (login, logout, callback)
+  if (request.nextUrl.pathname.startsWith('/api/auth')) {
     try {
-      return await auth0.middleware(request);
+      const authResponse = await auth0.middleware(request);
+      authResponse.headers.set("Access-Control-Allow-Origin", "*");
+      authResponse.headers.set("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
+      authResponse.headers.set("Access-Control-Allow-Headers", "*");
+      return authResponse;
     } catch (error) {
-      console.error('Auth middleware error:', error);
+      console.error('[Middleware] Auth middleware error:', error);
       // Clear bad cookies and redirect to login
-      const response = NextResponse.redirect(new URL('/auth/login', request.url));
+      const response = NextResponse.redirect(new URL('/api/auth/login', request.url));
       response.cookies.delete('appSession');
+      response.headers.set("Access-Control-Allow-Origin", "*");
       return response;
     }
   }
@@ -25,14 +39,16 @@ export async function middleware(request: NextRequest) {
       const session = await auth0.getSession(request);
       if (!session) {
         // Clear any bad cookies and redirect to login
-        const response = NextResponse.redirect(new URL('/auth/login', request.url));
+        const response = NextResponse.redirect(new URL('/api/auth/login', request.url));
         response.cookies.delete('appSession');
+        response.headers.set("Access-Control-Allow-Origin", "*");
         return response;
       }
     } catch (error) {
       // Session cookie is invalid, clear it and redirect to login
-      const response = NextResponse.redirect(new URL('/auth/login', request.url));
+      const response = NextResponse.redirect(new URL('/api/auth/login', request.url));
       response.cookies.delete('appSession');
+      response.headers.set("Access-Control-Allow-Origin", "*");
       return response;
     }
   }
@@ -40,11 +56,12 @@ export async function middleware(request: NextRequest) {
   // For public routes, just continue without checking session
   // This avoids JWE errors on every request
   const response = NextResponse.next();
+  response.headers.set("Access-Control-Allow-Origin", "*");
+  response.headers.set("Access-Control-Allow-Methods", "GET,POST,PUT,DELETE,OPTIONS");
+  response.headers.set("Access-Control-Allow-Headers", "*");
   return response;
 }
 
 export const config = {
-  matcher: [
-    "/((?!_next/static|_next/image|favicon.ico|sitemap.xml|robots.txt).*)",
-  ],
+  matcher: "/:path*",
 };
