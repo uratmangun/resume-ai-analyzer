@@ -47,7 +47,7 @@ export default function ListResumesPage() {
   });
 
   const handleViewResume = async (resumeId: string) => {
-    await sendMessage(`resume-editor-interface with ID: ${resumeId}`);
+    await sendMessage(`use view-resume UI interface to view resume with ID: ${resumeId}`);
   };
 
   const handleEditResume = async (resume: Resume) => {

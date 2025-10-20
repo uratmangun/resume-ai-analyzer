@@ -247,7 +247,7 @@ export default function EditResumePage() {
 
 ${JSON.stringify(formData)}
 
-create a stylized pdf do not show the title of the resume just give me beautiful colored pdf file and give me the download link
+create a modern stylized pdf do not show the title of the resume just give me beautiful colored pdf file and give me the download link
 named the pdf file ${formData.name}.pdf
 `;
 
