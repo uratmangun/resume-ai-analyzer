@@ -11,6 +11,7 @@ const isPublicRoute = createRouteMatcher([
   '/draft-create-resume(.*)',
   '/list-resumes(.*)',
   '/resume-editor-interface(.*)',
+  '/view-resume(.*)',
 ]);
 
 export default clerkMiddleware(async (auth, request) => {
