@@ -27,20 +27,20 @@ const achievementSchema = z.object({
 // Define the schema for tool parameters
 export const schema = {
   resumeId: z.string().uuid().describe("The UUID of the resume to update"),
-  name: z.string().min(1).describe("Full name (required)"),
-  title: z.string().optional().default("Untitled Resume").describe("Resume title (default: 'Untitled Resume')"),
-  email: z.string().email().optional().default("").describe("Email address (optional but recommended)"),
-  github: z.string().url().optional().describe("GitHub profile URL (optional)"),
-  description: z.string().optional().describe("Professional summary (optional)"),
-  workHistory: z.array(workHistorySchema).optional().default([]).describe("Array of work history entries (optional)"),
-  projects: z.array(projectSchema).optional().default([]).describe("Array of project entries (optional)"),
-  achievements: z.array(achievementSchema).optional().default([]).describe("Array of achievement entries (optional)"),
+  name: z.string().min(1).optional().describe("Full name (optional, will keep existing if not provided)"),
+  title: z.string().optional().describe("Resume title (optional, will keep existing if not provided)"),
+  email: z.string().email().optional().describe("Email address (optional, will keep existing if not provided)"),
+  github: z.string().url().optional().describe("GitHub profile URL (optional, will keep existing if not provided)"),
+  description: z.string().optional().describe("Professional summary (optional, will keep existing if not provided)"),
+  workHistory: z.array(workHistorySchema).optional().describe("Array of work history entries (optional, will keep existing if not provided)"),
+  projects: z.array(projectSchema).optional().describe("Array of project entries (optional, will keep existing if not provided)"),
+  achievements: z.array(achievementSchema).optional().describe("Array of achievement entries (optional, will keep existing if not provided)"),
 };
 
 // Define tool metadata
 export const metadata: ToolMetadata = {
   name: "update-resume",
-  description: "Update an existing resume with new data. Replaces all fields including work history, projects, and achievements.",
+  description: "Update an existing resume with new data. Only updates the fields that are explicitly provided, preserving existing values for fields that are not included in the update.",
   annotations: {
     title: "Update Resume",
     readOnlyHint: false,
@@ -90,38 +90,59 @@ export default async (params: InferSchema<typeof schema>, extra?: any) => {
       };
     }
 
-    // Filter out empty entries from arrays (matching frontend behavior)
-    const filteredWorkHistory = (params.workHistory || []).filter((entry) =>
-      entry.companyName.trim().length > 0 ||
-      entry.role.trim().length > 0 ||
-      entry.dateOfWork.trim().length > 0 ||
-      entry.description.trim().length > 0
-    );
+    // Merge new data with existing data - only update fields that are explicitly provided
+    const updatedData = {
+      userId: userId!,
+      title: params.title !== undefined ? params.title : existingResume.title,
+      name: params.name !== undefined ? params.name : existingResume.name,
+      email: params.email !== undefined ? params.email : existingResume.email,
+      github: params.github !== undefined 
+        ? (params.github.trim().length > 0 ? params.github : undefined)
+        : existingResume.github,
+      description: params.description !== undefined
+        ? (params.description.trim().length > 0 ? params.description : undefined)
+        : existingResume.description,
+      workHistory: [] as WorkHistoryEntry[],
+      projects: [] as ProjectEntry[],
+      achievements: [] as AchievementEntry[],
+    };
 
-    const filteredProjects = (params.projects || []).filter((entry) =>
-      entry.projectName.trim().length > 0 ||
-      (entry.projectUrl && entry.projectUrl.trim().length > 0) ||
-      entry.projectDescription.trim().length > 0
-    );
+    // Handle workHistory - use provided or keep existing
+    if (params.workHistory !== undefined) {
+      updatedData.workHistory = params.workHistory.filter((entry) =>
+        entry.companyName.trim().length > 0 ||
+        entry.role.trim().length > 0 ||
+        entry.dateOfWork.trim().length > 0 ||
+        entry.description.trim().length > 0
+      ) as WorkHistoryEntry[];
+    } else {
+      updatedData.workHistory = existingResume.workHistory as WorkHistoryEntry[];
+    }
 
-    const filteredAchievements = (params.achievements || []).filter((entry) =>
-      entry.achievementName.trim().length > 0 ||
-      (entry.achievementUrl && entry.achievementUrl.trim().length > 0) ||
-      entry.achievementDescription.trim().length > 0
-    );
+    // Handle projects - use provided or keep existing
+    if (params.projects !== undefined) {
+      updatedData.projects = params.projects.filter((entry) =>
+        entry.projectName.trim().length > 0 ||
+        (entry.projectUrl && entry.projectUrl.trim().length > 0) ||
+        entry.projectDescription.trim().length > 0
+      ) as ProjectEntry[];
+    } else {
+      updatedData.projects = existingResume.projects as ProjectEntry[];
+    }
+
+    // Handle achievements - use provided or keep existing
+    if (params.achievements !== undefined) {
+      updatedData.achievements = params.achievements.filter((entry) =>
+        entry.achievementName.trim().length > 0 ||
+        (entry.achievementUrl && entry.achievementUrl.trim().length > 0) ||
+        entry.achievementDescription.trim().length > 0
+      ) as AchievementEntry[];
+    } else {
+      updatedData.achievements = existingResume.achievements as AchievementEntry[];
+    }
 
     // Update the resume
-    await updateResume(params.resumeId, {
-      userId: userId!,
-      title: params.title || "Untitled Resume",
-      name: params.name,
-      email: params.email || "",
-      github: params.github && params.github.trim().length > 0 ? params.github : undefined,
-      description: params.description && params.description.trim().length > 0 ? params.description : undefined,
-      workHistory: filteredWorkHistory as WorkHistoryEntry[],
-      projects: filteredProjects as ProjectEntry[],
-      achievements: filteredAchievements as AchievementEntry[],
-    });
+    await updateResume(params.resumeId, updatedData);
 
     // Fetch the updated resume to return to the user
     const updatedResume = await getResume(params.resumeId);
