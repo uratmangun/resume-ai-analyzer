@@ -177,6 +177,8 @@ jobs:
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
           POSTGRES_URL: ${{ secrets.POSTGRES_URL }}
+          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
+          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
         run: |
           # Update wrangler.toml with the generated worker name for secret operations
           sed -i "s/^name = .*/name = \"${WORKER_NAME}\"/" wrangler.toml
@@ -192,6 +194,8 @@ jobs:
           echo "${WORKER_HOST}" | npx wrangler secret put VERCEL_URL
           echo "${WORKER_HOST}" | npx wrangler secret put VERCEL_PROJECT_PRODUCTION_URL
           echo "${POSTGRES_URL}" | npx wrangler secret put POSTGRES_URL
+          echo "${NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY}" | npx wrangler secret put NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY
+          echo "${CLERK_SECRET_KEY}" | npx wrangler secret put CLERK_SECRET_KEY
           echo "production" | npx wrangler secret put VERCEL_ENV
           
           echo "✓ All secrets set successfully"
