@@ -219,6 +219,7 @@ jobs:
       - name: Build for Cloudflare Workers
         run: bun run workers:build
         env:
+          POSTGRES_URL: ${{ secrets.POSTGRES_URL }}
           NODE_ENV: production
           NEXT_TELEMETRY_DISABLED: 1
           NODE_OPTIONS: "--max-old-space-size=4096"
