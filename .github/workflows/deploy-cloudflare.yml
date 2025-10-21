@@ -219,6 +219,8 @@ jobs:
       - name: Build for Cloudflare Workers
         run: bun run workers:build
         env:
+          NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY: ${{ secrets.NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY }}
+          CLERK_SECRET_KEY: ${{ secrets.CLERK_SECRET_KEY }}
           POSTGRES_URL: ${{ secrets.POSTGRES_URL }}
           NODE_ENV: production
           NEXT_TELEMETRY_DISABLED: 1
