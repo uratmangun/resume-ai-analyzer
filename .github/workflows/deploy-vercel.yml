@@ -13,7 +13,6 @@ on:
 
 jobs:
   build-and-deploy:
-    if: false
     runs-on: ubuntu-latest
     
     steps:
@@ -320,7 +319,7 @@ jobs:
           echo "✅ Production domain URL: $PRODUCTION_URL"
           echo "production_url=$PRODUCTION_URL" >> $GITHUB_OUTPUT
 
-      - name: "🏷️ Update repository homepage URL"
+      - name: "🏷️ Update repository description with URL"
         if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master'
         uses: actions/github-script@v7
         with:
@@ -328,18 +327,18 @@ jobs:
           script: |
             const actualProductionUrl = '${{ steps.deploy-production.outputs.production_url }}';
             
-            console.log(`Updating repository homepage to: ${actualProductionUrl}`);
+            console.log(`Updating repository description with URL: ${actualProductionUrl}`);
             
             try {
               await github.rest.repos.update({
                 owner: context.repo.owner,
                 repo: context.repo.repo,
-                homepage: actualProductionUrl
+                description: `Deployed at: ${actualProductionUrl}`
               });
-              console.log('Successfully updated repository homepage URL');
+              console.log('Successfully updated repository description with URL');
             } catch (error) {
-              console.error('Failed to update repository homepage URL:', error);
-              // Don't fail the workflow if homepage update fails
+              console.error('Failed to update repository description:', error);
+              // Don't fail the workflow if description update fails
             }
       - name: "📢 Announce deployment and favorite frame"
         if: (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master') && env.deploy_this == 'true'
