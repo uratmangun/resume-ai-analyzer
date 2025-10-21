@@ -1,5 +1,5 @@
 main = ".open-next/worker.js"
-name = "nextjs-cloudflare-worker"
+name = "resume-ai-creator-mcp-9799328264d631fa"
 compatibility_date = "2025-03-25"
 compatibility_flags = ["nodejs_compat"]
 
