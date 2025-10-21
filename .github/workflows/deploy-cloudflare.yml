@@ -176,6 +176,7 @@ jobs:
           WORKER_HOST: ${{ steps.generate-worker-name.outputs.worker_host }}
           CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
           CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          POSTGRES_URL: ${{ secrets.POSTGRES_URL }}
         run: |
           # Update wrangler.toml with the generated worker name for secret operations
           sed -i "s/^name = .*/name = \"${WORKER_NAME}\"/" wrangler.toml
@@ -190,6 +191,7 @@ jobs:
           # Use wrangler secret put which handles create/update automatically
           echo "${WORKER_HOST}" | npx wrangler secret put VERCEL_URL
           echo "${WORKER_HOST}" | npx wrangler secret put VERCEL_PROJECT_PRODUCTION_URL
+          echo "${POSTGRES_URL}" | npx wrangler secret put POSTGRES_URL
           echo "production" | npx wrangler secret put VERCEL_ENV
           
           echo "✓ All secrets set successfully"
