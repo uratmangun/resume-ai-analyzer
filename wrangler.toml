@@ -1,0 +1,85 @@
+main = ".open-next/worker.js"
+name = "nextjs-cloudflare-worker"
+compatibility_date = "2025-03-25"
+compatibility_flags = ["nodejs_compat"]
+
+[assets]
+directory = ".open-next/assets"
+binding = "ASSETS"
+
+# Environment variables (these will be overridden in Cloudflare dashboard)
+[vars]
+ENVIRONMENT = "production"
+
+# KV Namespaces (optional - uncomment if needed)
+# [[kv_namespaces]]
+# binding = "MY_KV"
+# id = "your-kv-namespace-id"
+
+# Durable Objects (optional - uncomment if needed)
+# [[durable_objects.bindings]]
+# name = "MY_DURABLE_OBJECT"
+# class_name = "MyDurableObject"
+# script_name = "my-durable-object"
+
+# R2 Buckets (optional - uncomment if needed)
+# [[r2_buckets]]
+# binding = "MY_BUCKET"
+# bucket_name = "my-bucket"
+
+# D1 Database (optional - uncomment if needed)
+# [[d1_databases]]
+# binding = "DB"
+# database_name = "my-database"
+# database_id = "your-database-id"
+
+# Service bindings (optional - uncomment if needed)
+# [[services]]
+# binding = "MY_SERVICE"
+# service = "my-service"
+
+# Analytics Engine (optional - uncomment if needed)
+# [[analytics_engine_datasets]]
+# binding = "AE"
+
+# Queues (optional - uncomment if needed)
+# [[queues.producers]]
+# binding = "MY_QUEUE"
+# queue = "my-queue"
+
+# [[queues.consumers]]
+# queue = "my-queue"
+
+# Vectorize (optional - uncomment if needed)
+# [[vectorize]]
+# binding = "VECTORIZE"
+# index_name = "my-index"
+
+# AI bindings (optional - uncomment if needed)
+# [ai]
+# binding = "AI"
+
+# Browser Rendering (optional - uncomment if needed)
+# [browser]
+# binding = "BROWSER"
+
+# MTLS certificates (optional - uncomment if needed)
+# [[mtls_certificates]]
+# binding = "MY_CERT"
+# certificate_id = "your-cert-id"
+
+# Hyperdrive (optional - uncomment if needed)
+# [[hyperdrive]]
+# binding = "HYPERDRIVE"
+# id = "your-hyperdrive-id"
+
+# Rate limiting (optional - uncomment if needed)
+# [[unsafe.bindings]]
+# name = "RATE_LIMITER"
+# type = "ratelimit"
+# namespace_id = "your-namespace-id"
+
+# Development server configuration
+[dev]
+port = 8788
+local_protocol = "http"
