@@ -216,7 +216,16 @@ jobs:
 
           echo "🎨 Generating SVG icons with gradient colors"
           node scripts/generate-svg-icons-with-gradient.js
-
+      - name: Build for Cloudflare Workers
+        run: bun run workers:build
+        env:
+          NODE_ENV: production
+          NEXT_TELEMETRY_DISABLED: 1
+          NODE_OPTIONS: "--max-old-space-size=4096"
+          # Set VERCEL environment variables for baseUrl.ts during build
+          VERCEL_ENV: production
+          VERCEL_URL: ${{ steps.generate-worker-name.outputs.worker_host }}
+          VERCEL_PROJECT_PRODUCTION_URL: ${{ steps.generate-worker-name.outputs.worker_host }}
       - name: Deploy to Cloudflare Workers (Production)
         if: ${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' }}
         run: |
