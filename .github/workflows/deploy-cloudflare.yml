@@ -1,0 +1,261 @@
+name: Deploy to Cloudflare Pages
+
+on:
+  push:
+    branches:
+      - main
+      - master
+  pull_request:
+    branches:
+      - main
+      - master
+  workflow_dispatch: {}
+
+jobs:
+  build-and-deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      deployments: write
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Bun
+        uses: oven-sh/setup-bun@v1
+        with:
+          bun-version: latest
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Find existing Cloudflare Workers and Pages projects
+        id: find-existing
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+        run: |
+          # Get repository name for pattern matching
+          REPO_NAME=$(echo "${{ github.repository }}" | cut -d'/' -f2)
+          REPO_PATTERN="${REPO_NAME}-"
+
+          echo "========================================="
+          echo "Looking for existing Workers and Pages"
+          echo "Pattern: ${REPO_PATTERN}*"
+          echo "========================================="
+
+          # Step 1: Find matching Workers
+          echo ""
+          echo "Step 1: Checking for existing Workers to reuse..."
+
+          # List all Workers
+          WORKERS=$(curl -s -X GET \
+            "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/workers/scripts" \
+            -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            -H "Content-Type: application/json")
+
+          # Extract worker names that match the pattern
+          MATCHING_WORKERS=$(echo "$WORKERS" | jq -r ".result[] | select(.id | startswith(\"${REPO_PATTERN}\")) | .id" || true)
+
+          if [ -n "$MATCHING_WORKERS" ]; then
+            echo "Found matching Workers:"
+            echo "$MATCHING_WORKERS"
+            EXISTING_WORKER=$(echo "$MATCHING_WORKERS" | head -n1)
+            if [ -n "$EXISTING_WORKER" ]; then
+              echo "Reusing existing Worker: $EXISTING_WORKER"
+              echo "existing_worker=$EXISTING_WORKER" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "No existing Workers found matching pattern: ${REPO_PATTERN}*"
+          fi
+
+          # Step 2: Find matching Pages projects
+          echo ""
+          echo "Step 2: Checking for existing Pages projects to reuse..."
+
+          # List all Cloudflare Pages projects
+          PROJECTS=$(curl -s -X GET \
+            "https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/pages/projects" \
+            -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" \
+            -H "Content-Type: application/json")
+
+          # Extract project names that match the pattern
+          MATCHING_PROJECTS=$(echo "$PROJECTS" | jq -r ".result[] | select(.name | startswith(\"${REPO_PATTERN}\")) | .name" || true)
+
+          if [ -n "$MATCHING_PROJECTS" ]; then
+            echo "Found matching Pages projects:"
+            echo "$MATCHING_PROJECTS"
+            EXISTING_PROJECT=$(echo "$MATCHING_PROJECTS" | head -n1)
+            if [ -n "$EXISTING_PROJECT" ]; then
+              echo "Reusing existing Pages project: $EXISTING_PROJECT"
+              echo "existing_project=$EXISTING_PROJECT" >> $GITHUB_OUTPUT
+            fi
+          else
+            echo "No existing Pages projects found matching pattern: ${REPO_PATTERN}*"
+          fi
+
+          echo ""
+          echo "========================================="
+          echo "Lookup complete"
+          echo "========================================="
+
+      - name: Determine worker name for deployment
+        id: generate-worker-name
+        run: |
+          # Get repository name
+          REPO_NAME=$(echo "${{ github.repository }}" | cut -d'/' -f2)
+
+          EXISTING_WORKER="${{ steps.find-existing.outputs.existing_worker }}"
+
+          if [ -n "$EXISTING_WORKER" ]; then
+            WORKER_NAME="$EXISTING_WORKER"
+            echo "Reusing existing Worker: $WORKER_NAME"
+          else
+            # Generate random alphanumeric string
+            RANDOM_STRING=$(openssl rand -hex 8 | tr -d '\n')
+
+            # Combine repository name with random string
+            WORKER_NAME="${REPO_NAME}-${RANDOM_STRING}"
+
+            # Ensure minimum length of 26 characters
+            while [ ${#WORKER_NAME} -lt 26 ]; do
+              EXTRA_CHARS=$(openssl rand -hex 2 | tr -d '\n')
+              WORKER_NAME="${WORKER_NAME}${EXTRA_CHARS}"
+            done
+
+            # Ensure worker name is valid (lowercase, alphanumeric, hyphens only)
+            WORKER_NAME=$(echo "$WORKER_NAME" | tr '[:upper:]' '[:lower:]' | sed 's/[^a-z0-9-]/-/g')
+          fi
+
+          echo "Generated worker name: $WORKER_NAME"
+          echo "worker_name=$WORKER_NAME" >> $GITHUB_OUTPUT
+          echo "worker_domain=https://${WORKER_NAME}.uratmangun.workers.dev" >> $GITHUB_OUTPUT
+          echo "worker_host=${WORKER_NAME}.uratmangun.workers.dev" >> $GITHUB_OUTPUT
+          echo "preview_domain=https://${WORKER_NAME}-preview.uratmangun.workers.dev" >> $GITHUB_OUTPUT
+
+      - name: Build for Cloudflare Workers
+        run: bun run workers:build
+        env:
+          NODE_ENV: production
+          NEXT_TELEMETRY_DISABLED: 1
+          NODE_OPTIONS: "--max-old-space-size=4096"
+          # Set VERCEL environment variables for baseUrl.ts during build
+          VERCEL_ENV: production
+          VERCEL_URL: ${{ steps.generate-worker-name.outputs.worker_host }}
+          VERCEL_PROJECT_PRODUCTION_URL: ${{ steps.generate-worker-name.outputs.worker_host }}
+
+      - name: Ensure Cloudflare Worker project exists
+        if: ${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' }}
+        env:
+          WORKER_NAME: ${{ steps.generate-worker-name.outputs.worker_name }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          API_URL="https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${WORKER_NAME}"
+          AUTH_HEADER="Authorization: Bearer ${CLOUDFLARE_API_TOKEN}"
+
+          HTTP_CODE=$(curl -s -o /dev/null -w "%{http_code}" -H "$AUTH_HEADER" "$API_URL")
+
+          if [ "$HTTP_CODE" -eq 404 ]; then
+            echo "Worker ${WORKER_NAME} not found. Creating placeholder Worker to bootstrap secrets..."
+            printf "addEventListener('fetch', event => {\n  event.respondWith(new Response('Deployment placeholder', { status: 200 }));\n});\n" > placeholder-worker.js
+            CREATE_CODE=$(curl -s -o /dev/null -w "%{http_code}" -X PUT "$API_URL" \
+              -H "$AUTH_HEADER" \
+              -H "Content-Type: application/javascript" \
+              --data-binary "@placeholder-worker.js")
+
+            if [ "$CREATE_CODE" -ge 200 ] && [ "$CREATE_CODE" -lt 300 ]; then
+              echo "Placeholder Worker created (HTTP ${CREATE_CODE})."
+            else
+              echo "Failed to create placeholder Worker (HTTP ${CREATE_CODE})."
+              exit 1
+            fi
+          else
+            echo "Worker ${WORKER_NAME} already exists (HTTP ${HTTP_CODE})."
+          fi
+
+      - name: Set Cloudflare production secrets
+        if: ${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' }}
+        env:
+          WORKER_NAME: ${{ steps.generate-worker-name.outputs.worker_name }}
+          WORKER_HOST: ${{ steps.generate-worker-name.outputs.worker_host }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+        run: |
+          # Update wrangler.toml with the generated worker name for secret operations
+          sed -i "s/^name = .*/name = \"${WORKER_NAME}\"/" wrangler.toml
+          
+          echo "Cleaning up existing worker to avoid binding conflicts..."
+          API_URL="https://api.cloudflare.com/client/v4/accounts/${CLOUDFLARE_ACCOUNT_ID}/workers/scripts/${WORKER_NAME}"
+          curl -s -X DELETE "$API_URL" -H "Authorization: Bearer ${CLOUDFLARE_API_TOKEN}" > /dev/null || true
+          
+          echo "Setting secrets using wrangler CLI..."
+          echo "Worker: ${WORKER_NAME}"
+          
+          # Use wrangler secret put which handles create/update automatically
+          echo "${WORKER_HOST}" | npx wrangler secret put VERCEL_URL
+          echo "${WORKER_HOST}" | npx wrangler secret put VERCEL_PROJECT_PRODUCTION_URL
+          echo "production" | npx wrangler secret put VERCEL_ENV
+          
+          echo "✓ All secrets set successfully"
+
+      - name: "🔑 Generate Farcaster account association"
+        if: ${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' }}
+        env:
+          NEXT_PUBLIC_APP_DOMAIN: https://${{ steps.generate-worker-name.outputs.worker_host }}
+          FARCASTER_FID: ${{ secrets.FARCASTER_FID }}
+          FARCASTER_CUSTODY_ADDRESS: ${{ secrets.FARCASTER_CUSTODY_ADDRESS }}
+          FARCASTER_CUSTODY_PRIVATE_KEY: ${{ secrets.FARCASTER_CUSTODY_PRIVATE_KEY }}
+        run: |
+          echo "🔧 Generating Farcaster account association for domain: $NEXT_PUBLIC_APP_DOMAIN"
+          node scripts/generate-farcaster-account-association.js generate
+
+      - name: "🎨 Generate SVG icons with gradients"
+        if: ${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' }}
+        env:
+          NEXT_PUBLIC_APP_DOMAIN: ${{ steps.generate-worker-name.outputs.worker_host }}
+        run: |
+          # Export domain URLs for SVG icon generation
+
+          echo "🎨 Generating SVG icons with gradient colors"
+          node scripts/generate-svg-icons-with-gradient.js
+
+      - name: Deploy to Cloudflare Workers (Production)
+        if: ${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' }}
+        run: |
+          # Update wrangler.toml with the generated worker name
+          sed -i "s/^name = .*/name = \"${{ steps.generate-worker-name.outputs.worker_name }}\"/" wrangler.toml
+          # Deploy using opennextjs-cloudflare (deploy only, skip build since we already built)
+          npx opennextjs-cloudflare deploy
+        env:
+          CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+
+      - name: Update repository homepage URL
+        if: ${{ github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master' }}
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.PAT_TOKEN }}
+          script: |
+            const workerName = '${{ steps.generate-worker-name.outputs.worker_name }}';
+            const homepageUrl = `https://${workerName}.uratmangun.workers.dev`;
+
+            console.log(`Updating repository homepage to: ${homepageUrl}`);
+
+            try {
+              await github.rest.repos.update({
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                homepage: homepageUrl
+              });
+              console.log('Successfully updated repository homepage URL');
+            } catch (error) {
+              console.error('Failed to update repository homepage URL:', error);
+              // Don't fail the workflow if homepage update fails
+            }
