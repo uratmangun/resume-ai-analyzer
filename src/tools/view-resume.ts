@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { type InferSchema, type ToolMetadata } from "xmcp";
 import { getAppsSdkCompatibleHtml, baseURL } from "@/lib/apps-sdk-html";
-
+import { getUserIdFromExtra } from "../lib/get-user-id";
 // Define the schema for tool parameters
 export const schema = {
   resumeId: z.string().uuid().describe("The UUID of the resume to view"),
@@ -30,7 +30,18 @@ export const metadata: ToolMetadata = {
 };
 
 // Tool implementation
-export default async function handler(params: InferSchema<typeof schema>) {
+export default async function handler(params: InferSchema<typeof schema>, extra?: any) {
+  const userId = getUserIdFromExtra(extra);
+  if (!userId) {
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify({ error: "Unauthorized: Missing user identity" }, null, 2),
+        },
+      ],
+    };
+  }
   const { resumeId } = params;
   
   // Get the HTML for the view-resume page
