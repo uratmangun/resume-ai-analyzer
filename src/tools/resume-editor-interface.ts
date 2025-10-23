@@ -1,6 +1,7 @@
 import { z } from "zod";
 import { type InferSchema, type ToolMetadata } from "xmcp";
 import { getAppsSdkCompatibleHtml, baseURL } from "@/lib/apps-sdk-html";
+import { getUserIdFromExtra } from "../lib/get-user-id";
 
 // Define schemas for nested objects
 const workHistorySchema = z.object({
@@ -58,7 +59,18 @@ export const metadata: ToolMetadata = {
 };
 
 // Tool implementation
-export default async function handler(params: InferSchema<typeof schema>) {
+export default async function handler(params: InferSchema<typeof schema>, extra?: any) {
+  const userId = getUserIdFromExtra(extra);
+  if (!userId) {
+    return {
+      content: [
+        {
+          type: "text",
+          text: JSON.stringify({ error: "Unauthorized: Missing user identity" }, null, 2),
+        },
+      ],
+    };
+  }
   const { resumeId, name, title, email, github, description, workHistory, projects, achievements } = params;
   
   // Get the HTML for the get-resume page

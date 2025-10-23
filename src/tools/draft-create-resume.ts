@@ -2,7 +2,7 @@ import { type ToolMetadata } from "xmcp";
 import { getAppsSdkCompatibleHtml, baseURL } from "@/lib/apps-sdk-html";
 import { z } from "zod";
 import { type InferSchema } from "xmcp";
-
+import { getUserIdFromExtra } from "../lib/get-user-id";
 // Define schemas for nested objects (same as create-resume)
 const workHistorySchema = z.object({
   companyName: z.string().describe("Company name"),
@@ -50,7 +50,18 @@ export const metadata: ToolMetadata = {
   },
 };
 
-export default async function handler(params: InferSchema<typeof schema>) {
+export default async function handler(params: InferSchema<typeof schema>, extra?: any) {
+  const userId = getUserIdFromExtra(extra);
+    if (!userId) {
+      return {
+        content: [
+          {
+            type: "text",
+            text: JSON.stringify({ error: "Unauthorized: Missing user identity" }, null, 2),
+          },
+        ],
+      };
+    }
   const html = await getAppsSdkCompatibleHtml(baseURL, "/draft-create-resume");
 
   return {
